@@ -90,8 +90,29 @@ jobs:
       - name: Gradle 构建
         run: |
           chmod +x gradlew
-          ./gradlew :app:assembleRelease --no-daemon --stacktrace \
-            -Dorg.gradle.jvmargs="-Xmx6g -XX:MaxMetaspaceSize=1g"
+          attempt=1
+          while [ "$attempt" -le 3 ]; do
+            echo "===== Gradle attempt $attempt ====="
+            if ./gradlew :app:assembleRelease --no-daemon --stacktrace \
+                 -Dorg.gradle.jvmargs="-Xmx6g -XX:MaxMetaspaceSize=1g"; then
+              exit 0
+            fi
+            echo "Gradle attempt $attempt failed"
+            if [ "$attempt" -eq 2 ]; then
+              echo "切换到腾讯 Gradle 镜像后重试"
+              python3 - <<'PY'
+          p = "gradle/wrapper/gradle-wrapper.properties"
+          s = open(p, encoding="utf-8").read()
+          s = s.replace("services.gradle.org/distributions/",
+                        "mirrors.cloud.tencent.com/gradle/")
+          open(p, "w", encoding="utf-8").write(s)
+          print(s)
+          PY
+            fi
+            attempt=$((attempt + 1))
+            sleep 15
+          done
+          exit 1
 
       - name: 校验产物
         id: apk
