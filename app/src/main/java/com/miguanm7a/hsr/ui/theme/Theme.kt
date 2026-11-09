@@ -1,6 +1,8 @@
 package com.miguanm7a.hsr.ui.theme
 
 import android.os.Build
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ColorScheme
@@ -156,6 +158,58 @@ enum class ThemeMode { SYSTEM, WHITE, DARK, PURE_DARK }
 enum class AccentTheme { MARCH7, MAA }
 
 @Composable
+private fun animatedColor(color: Color, label: String): Color =
+    animateColorAsState(
+        targetValue = color,
+        animationSpec = tween(
+            durationMillis = MaaDesignTokens.Motion.base,
+            easing = MaaDesignTokens.Motion.EaseOut,
+        ),
+        label = label,
+    ).value
+
+/** 主题/强调色切换时，逐槽位插值整张 ColorScheme，避免整屏硬切。 */
+@Composable
+private fun animatedColorScheme(target: ColorScheme): ColorScheme = ColorScheme(
+    primary = animatedColor(target.primary, "primary"),
+    onPrimary = animatedColor(target.onPrimary, "onPrimary"),
+    primaryContainer = animatedColor(target.primaryContainer, "primaryContainer"),
+    onPrimaryContainer = animatedColor(target.onPrimaryContainer, "onPrimaryContainer"),
+    inversePrimary = animatedColor(target.inversePrimary, "inversePrimary"),
+    secondary = animatedColor(target.secondary, "secondary"),
+    onSecondary = animatedColor(target.onSecondary, "onSecondary"),
+    secondaryContainer = animatedColor(target.secondaryContainer, "secondaryContainer"),
+    onSecondaryContainer = animatedColor(target.onSecondaryContainer, "onSecondaryContainer"),
+    tertiary = animatedColor(target.tertiary, "tertiary"),
+    onTertiary = animatedColor(target.onTertiary, "onTertiary"),
+    tertiaryContainer = animatedColor(target.tertiaryContainer, "tertiaryContainer"),
+    onTertiaryContainer = animatedColor(target.onTertiaryContainer, "onTertiaryContainer"),
+    background = animatedColor(target.background, "background"),
+    onBackground = animatedColor(target.onBackground, "onBackground"),
+    surface = animatedColor(target.surface, "surface"),
+    onSurface = animatedColor(target.onSurface, "onSurface"),
+    surfaceVariant = animatedColor(target.surfaceVariant, "surfaceVariant"),
+    onSurfaceVariant = animatedColor(target.onSurfaceVariant, "onSurfaceVariant"),
+    surfaceTint = animatedColor(target.surfaceTint, "surfaceTint"),
+    inverseSurface = animatedColor(target.inverseSurface, "inverseSurface"),
+    inverseOnSurface = animatedColor(target.inverseOnSurface, "inverseOnSurface"),
+    error = animatedColor(target.error, "error"),
+    onError = animatedColor(target.onError, "onError"),
+    errorContainer = animatedColor(target.errorContainer, "errorContainer"),
+    onErrorContainer = animatedColor(target.onErrorContainer, "onErrorContainer"),
+    outline = animatedColor(target.outline, "outline"),
+    outlineVariant = animatedColor(target.outlineVariant, "outlineVariant"),
+    scrim = animatedColor(target.scrim, "scrim"),
+    surfaceBright = animatedColor(target.surfaceBright, "surfaceBright"),
+    surfaceDim = animatedColor(target.surfaceDim, "surfaceDim"),
+    surfaceContainer = animatedColor(target.surfaceContainer, "surfaceContainer"),
+    surfaceContainerHigh = animatedColor(target.surfaceContainerHigh, "surfaceContainerHigh"),
+    surfaceContainerHighest = animatedColor(target.surfaceContainerHighest, "surfaceContainerHighest"),
+    surfaceContainerLow = animatedColor(target.surfaceContainerLow, "surfaceContainerLow"),
+    surfaceContainerLowest = animatedColor(target.surfaceContainerLowest, "surfaceContainerLowest"),
+)
+
+@Composable
 fun MaaTermuxTheme(
     themeMode: ThemeMode = ThemeMode.SYSTEM,
     accentTheme: AccentTheme = AccentTheme.MARCH7,
@@ -203,8 +257,10 @@ fun MaaTermuxTheme(
         }
     }
 
+    val animatedScheme = animatedColorScheme(colorScheme)
+
     MaterialTheme(
-        colorScheme = colorScheme,
+        colorScheme = animatedScheme,
         typography = Typography,
         shapes = MaaShapes,
         content = content,

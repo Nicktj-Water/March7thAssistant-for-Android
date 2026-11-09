@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardOptions
@@ -41,6 +42,7 @@ import com.miguanm7a.hsr.ui.MainViewModel
 import com.miguanm7a.hsr.ui.components.InfoRow
 import com.miguanm7a.hsr.ui.components.MaaCard
 import com.miguanm7a.hsr.ui.components.SectionHeader
+import com.miguanm7a.hsr.ui.components.pressScale
 import com.miguanm7a.hsr.ui.config.AdvancedConfigActivity
 import com.miguanm7a.hsr.deploy.AdvancedConfig
 import com.miguanm7a.hsr.termux.TermuxPaths
@@ -226,9 +228,12 @@ fun SettingsScreen(
             Text("主题模式", style = MaterialTheme.typography.titleSmall)
             Row(horizontalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.sm)) {
                 ThemeMode.entries.forEach { mode ->
+                    val chipInteraction = remember(mode) { MutableInteractionSource() }
                     FilterChip(
                         selected = themeMode == mode,
                         onClick = { onThemeModeChange(mode) },
+                        modifier = Modifier.pressScale(chipInteraction),
+                        interactionSource = chipInteraction,
                         label = {
                             Text(
                                 when (mode) {
@@ -245,14 +250,20 @@ fun SettingsScreen(
             Spacer(Modifier.height(MaaDesignTokens.Spacing.sm))
             Text("强调色", style = MaterialTheme.typography.titleSmall)
             Row(horizontalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.sm)) {
+                val march7Interaction = remember { MutableInteractionSource() }
                 FilterChip(
                     selected = accentTheme == AccentTheme.MARCH7,
                     onClick = { onAccentChange(AccentTheme.MARCH7) },
+                    modifier = Modifier.pressScale(march7Interaction),
+                    interactionSource = march7Interaction,
                     label = { Text("三月七粉") },
                 )
+                val maaInteraction = remember { MutableInteractionSource() }
                 FilterChip(
                     selected = accentTheme == AccentTheme.MAA,
                     onClick = { onAccentChange(AccentTheme.MAA) },
+                    modifier = Modifier.pressScale(maaInteraction),
+                    interactionSource = maaInteraction,
                     label = { Text("MAA 蓝") },
                 )
             }

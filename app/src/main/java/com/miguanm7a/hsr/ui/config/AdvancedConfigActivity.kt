@@ -5,6 +5,13 @@ import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -142,19 +149,45 @@ private fun AdvancedConfigScreen(onBack: () -> Unit) {
             return@Column
         }
 
-        if (group == null) {
-            CategoryList(
-                onOpen = { selectedGroup = it },
-            )
-        } else {
-            GroupFields(
-                group = group,
-                values = values,
-                onToggle = { field, checked ->
-                    save(field, if (checked) "true" else "false") {}
-                },
-                onEdit = { editing = it },
-            )
+        AnimatedContent(
+            targetState = selectedGroup,
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth(),
+            transitionSpec = {
+                val forward = targetState != null
+                val enter = slideInHorizontally(
+                    animationSpec = tween(
+                        durationMillis = MaaDesignTokens.Motion.page,
+                        easing = MaaDesignTokens.Motion.EaseOut,
+                    ),
+                    initialOffsetX = { w -> if (forward) w / 8 else -w / 8 },
+                ) + fadeIn(tween(MaaDesignTokens.Motion.fast))
+                val exit = slideOutHorizontally(
+                    animationSpec = tween(
+                        durationMillis = MaaDesignTokens.Motion.fast + 40,
+                        easing = MaaDesignTokens.Motion.EaseIn,
+                    ),
+                    targetOffsetX = { w -> if (forward) -w / 12 else w / 12 },
+                ) + fadeOut(tween(MaaDesignTokens.Motion.fast))
+                enter togetherWith exit
+            },
+            label = "advancedConfigGroup",
+        ) { target ->
+            if (target == null) {
+                CategoryList(
+                    onOpen = { selectedGroup = it },
+                )
+            } else {
+                GroupFields(
+                    group = target,
+                    values = values,
+                    onToggle = { field, checked ->
+                        save(field, if (checked) "true" else "false") {}
+                    },
+                    onEdit = { editing = it },
+                )
+            }
         }
     }
 

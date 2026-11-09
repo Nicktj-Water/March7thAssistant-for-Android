@@ -1,5 +1,7 @@
 package com.miguanm7a.hsr.ui.theme
 
+import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.Easing
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
@@ -37,6 +39,16 @@ object MaaDesignTokens {
     object Card {
         val elevation: Dp = 0.dp
         val innerPadding: Dp = 16.dp
+    }
+
+    /** 动效：全 App 统一时长与曲线，新增动画优先复用这里。 */
+    object Motion {
+        const val fast = 120
+        const val base = 200
+        const val page = 240
+
+        val EaseOut: Easing = CubicBezierEasing(0.23f, 1f, 0.32f, 1f)
+        val EaseIn: Easing = CubicBezierEasing(0.32f, 0f, 0.67f, 1f)
     }
 }
 
