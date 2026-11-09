@@ -333,15 +333,21 @@ def pack(stage: str, out: str, modes: dict) -> int:
     log(f"打包 {stage} -> {out}")
     tmp = out + ".tmp"
 
-    # 先收集全部条目，目录在前、其余在后，保证内容稳定
+    # 先收集全部条目，目录在前、其余在后，保证内容稳定。
+    # 注意 os.walk 会把「指向目录的符号链接」放进 dirs 且不遍历它，
+    # /bin、/lib、/sbin 这类 usrmerge 链接会因此被漏掉——必须用 scandir 显式收集。
     entries: list[str] = []
-    for root, dirs, files in os.walk(stage):
-        dirs.sort()
-        rel_root = os.path.relpath(root, stage)
-        if rel_root != ".":
-            entries.append(rel_root)
-        for name in sorted(files):
-            entries.append(os.path.relpath(os.path.join(root, name), stage))
+    stack = ["."]
+    while stack:
+        rel = stack.pop()
+        full = stage if rel == "." else os.path.join(stage, *rel.split("/"))
+        with os.scandir(full) as it:
+            children = sorted(it, key=lambda e: e.name)
+        for e in children:
+            child_rel = e.name if rel == "." else rel + "/" + e.name
+            entries.append(child_rel)
+            if e.is_dir(follow_symlinks=False):
+                stack.append(child_rel)
 
     dirs_out = []
     others = []
@@ -395,6 +401,23 @@ def pack(stage: str, out: str, modes: dict) -> int:
 
     os.replace(tmp, out)
     size = os.path.getsize(out)
+
+    # 打包后自检：关键路径必须真的进入 tar（防 usrmerge 链接再次漏掉）
+    required = ["bin", "lib", "sbin", "usr/bin/bash", "opt/venv/bin/python", "m7a"]
+    present = set()
+    with tarfile.open(out, "r|gz") as tf:
+        for member in tf:
+            name = norm(member.name)
+            if name in required:
+                present.add(name)
+            if len(present) == len(required):
+                break
+    missing = [p for p in required if p not in present]
+    if missing:
+        log(f"!! 打包结果缺少关键路径：{', '.join(missing)}")
+        raise SystemExit(1)
+    log(f"自检通过：{', '.join(required)}")
+
     log(f"输出: {out}")
     log(f"大小: {human(size)} （{size} 字节）")
     log(f"条目: {stats['dir']} 目录 / {stats['file']} 文件 / {stats['link']} 链接，"
