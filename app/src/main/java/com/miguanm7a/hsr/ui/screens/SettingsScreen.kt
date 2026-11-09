@@ -1,5 +1,6 @@
 package com.miguanm7a.hsr.ui.screens
 
+import android.content.Intent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -40,6 +41,8 @@ import com.miguanm7a.hsr.ui.MainViewModel
 import com.miguanm7a.hsr.ui.components.InfoRow
 import com.miguanm7a.hsr.ui.components.MaaCard
 import com.miguanm7a.hsr.ui.components.SectionHeader
+import com.miguanm7a.hsr.ui.config.AdvancedConfigActivity
+import com.miguanm7a.hsr.deploy.AdvancedConfig
 import com.miguanm7a.hsr.termux.TermuxPaths
 import com.miguanm7a.hsr.ui.theme.AccentTheme
 import com.miguanm7a.hsr.ui.theme.ErrColor
@@ -201,6 +204,21 @@ fun SettingsScreen(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+        }
+
+        SectionHeader("高级配置")
+        MaaCard {
+            val ctx = LocalContext.current
+            Text("副本 / 宇宙 / 终局 / 资产 / 活动", style = MaterialTheme.typography.titleSmall)
+            Text(
+                "${AdvancedConfig.FIELDS.size} 项上游 config.yaml 配置；直接写盘，下次运行生效。",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            OutlinedButton(
+                onClick = { ctx.startActivity(Intent(ctx, AdvancedConfigActivity::class.java)) },
+                modifier = Modifier.fillMaxWidth(),
+            ) { Text("打开高级配置") }
         }
 
         SectionHeader("外观")

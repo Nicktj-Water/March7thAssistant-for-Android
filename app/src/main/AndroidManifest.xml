@@ -43,6 +43,12 @@
         </activity>
 
         <activity
+            android:name=".ui.config.AdvancedConfigActivity"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|smallestScreenSize|density|uiMode"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
+
+        <activity
             android:name=".ui.terminal.TerminalActivity"
             android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|smallestScreenSize|density|uiMode"
             android:exported="false"
