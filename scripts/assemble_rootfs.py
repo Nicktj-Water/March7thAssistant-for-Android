@@ -315,6 +315,33 @@ def strip_openvino(stage: str) -> int:
 
 # ---------------------------------------------------------------- 打包
 
+ETC_HOSTS_ENTRIES = (
+    "127.0.0.1 localhost",
+    "::1 localhost ip6-localhost ip6-loopback",
+)
+
+
+def ensure_etc_hosts(stage: str) -> None:
+    """ChromeDriver/Selenium 用 http://localhost:<port>/status 探测就绪状态，
+    Debian slim 的 /etc/hosts 若没有 localhost，容器内 Selenium 会永远连不上 driver。"""
+    path = os.path.join(stage, "etc", "hosts")
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    lines: list[str] = []
+    if os.path.isfile(path):
+        with open(path, "r", encoding="utf-8", errors="replace") as f:
+            lines = f.read().splitlines()
+    changed = False
+    for entry in ETC_HOSTS_ENTRIES:
+        name = entry.split()[1]
+        if not any(name in line.split() for line in lines):
+            lines.append(entry)
+            changed = True
+    if changed or not os.path.isfile(path):
+        with open(path, "w", encoding="utf-8") as f:
+            f.write("\n".join(lines).strip("\n") + "\n")
+        log("[hosts] 已写入 localhost 解析")
+
+
 def check_stage(stage: str) -> bool:
     # /m7a 即使被 --strip 清空，也必须作为空目录保留（运行时 bind 挂载点）
     required = ["bin", "usr", "etc", "opt", "m7a", "usr/bin/bash"]
@@ -322,8 +349,17 @@ def check_stage(stage: str) -> bool:
     for path in required:
         mark = "OK " if os.path.lexists(os.path.join(stage, path)) else "!! "
         log(f"  {mark}{path}")
-    if missing:
-        log(f"!! stage 缺少关键路径：{', '.join(missing)}")
+    hosts = os.path.join(stage, "etc", "hosts")
+    hosts_ok = False
+    if os.path.isfile(hosts):
+        with open(hosts, "r", encoding="utf-8", errors="replace") as f:
+            hosts_ok = "localhost" in f.read()
+    log(f"  {'OK ' if hosts_ok else '!! '}etc/hosts localhost")
+    if missing or not hosts_ok:
+        if missing:
+            log(f"!! stage 缺少关键路径：{', '.join(missing)}")
+        if not hosts_ok:
+            log("!! stage 的 /etc/hosts 没有 localhost 条目")
         return False
     return True
 
@@ -525,6 +561,7 @@ def main(argv=None) -> int:
             f"(释放 {human(stage_size_before - stage_size_after)})")
 
     # ---- 3. 打包 ----
+    ensure_etc_hosts(stage)
     if not check_stage(stage):
         return 1
     size = pack(stage, os.path.abspath(args.out), modes)

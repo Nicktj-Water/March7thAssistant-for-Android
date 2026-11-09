@@ -65,6 +65,14 @@ object DeployScripts {
      * 原样存储，内容仍然是 gzip 压缩的 tar。
      */
     const val ROOTFS_ASSET = "rootfs/m7a-rootfs.bin"
+    /**
+     * 容器内 localhost 兜底：Debian slim 的 /etc/hosts 可能没有 localhost，
+     * 而 Selenium 用 http://localhost:<port>/status 探测 chromedriver 是否就绪，
+     * 缺条目时会一直连不上 driver（表现为启动浏览器卡死）。
+     */
+    private const val HOSTS_GUARD =
+        "grep -q localhost /etc/hosts 2>/dev/null || printf '127.0.0.1 localhost\\n::1 localhost ip6-localhost ip6-loopback\\n' >> /etc/hosts"
+
 
     /** Asset 中的 March7thAssistant 源码包（zip）。 */
     const val CODE_ASSET = "code/m7a-code.zip"
@@ -278,6 +286,7 @@ object DeployScripts {
         appendLine("export DEBIAN_FRONTEND=noninteractive")
         appendLine("export HOME=/root")
         appendLine("export TMPDIR=/tmp")
+        appendLine(HOSTS_GUARD)
         appendLine("export PATH=$CONTAINER_VENV/bin:${D}PATH")
         appendLine("export LANG=C.UTF-8")
         appendLine("ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime 2>/dev/null || true")
@@ -414,8 +423,8 @@ object DeployScripts {
             append(" MARCH7TH_DRIVER_PATH=/usr/bin/chromedriver")
             append(" TZ=Asia/Shanghai")
             append(" PATH=$CONTAINER_VENV/bin:/usr/local/bin:/usr/bin:/bin")
-            append(" /bin/bash -lc 'cd ").append(CONTAINER_APP_DIR)
-            append(" && exec ").append(CONTAINER_VENV).append("/bin/python main.py").append(taskArg).append("'")
+            append(" /bin/bash -lc \"").append(HOSTS_GUARD).append("; cd ").append(CONTAINER_APP_DIR)
+            append(" && exec ").append(CONTAINER_VENV).append("/bin/python main.py").append(taskArg).append("\"")
         }
     }
 
@@ -456,7 +465,7 @@ object DeployScripts {
             appendLine("  MARCH7TH_DRIVER_PATH=/usr/bin/chromedriver \\")
             appendLine("  TZ=Asia/Shanghai \\")
             appendLine("  PATH=$CONTAINER_VENV/bin:/usr/local/bin:/usr/bin:/bin \\")
-            appendLine("  /bin/bash -lc \"cd $CONTAINER_APP_DIR && exec $CONTAINER_VENV/bin/python main.py ${D}TASK\"")
+            appendLine("  /bin/bash -lc \"" + HOSTS_GUARD + "; cd $CONTAINER_APP_DIR && exec $CONTAINER_VENV/bin/python main.py ${D}TASK\"")
             appendLine()
         }
     }
