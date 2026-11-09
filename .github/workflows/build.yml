@@ -23,6 +23,7 @@ concurrency:
 
 jobs:
   build:
+    if: ${{ !contains(github.event.head_commit.message, '[skip ci]') }}
     runs-on: ubuntu-latest
     timeout-minutes: 360
 
@@ -139,15 +140,27 @@ jobs:
           set -euo pipefail
           VERSION=$(sed -n 's/.*versionName = "\([^"]*\)".*/\1/p' app/build.gradle.kts | head -1)
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
           PREV=$(git tag -l 'apk-*' --sort=-v:refname | head -1 || true)
+          if [ -n "$PREV" ]; then
+            LOG=$(git log "$PREV..HEAD" --no-merges --pretty='%s')
+          else
+            LOG=$(git log -8 --no-merges --pretty='%s')
+          fi
+          NOTES=$(printf '%s\n' "$LOG" \
+            | grep -vE '^(chore|ci|docs|test)(\([^)]*\))?:' \
+            | sed -E 's/^(feat|fix|perf|refactor|style)(\([^)]*\))?: /- /' \
+            | sed -E '/^- /! s/^/- /' \
+            | grep -v '^$' \
+            | head -8 || true)
+          if [ -z "$NOTES" ]; then
+            NOTES="- 维护：构建与发布流程调整"
+          fi
+
           {
             echo "**本次更新**"
             echo
-            if [ -n "$PREV" ]; then
-              git log "$PREV..HEAD" --no-merges --pretty='- %s' | head -8
-            else
-              git log -8 --no-merges --pretty='- %s'
-            fi
+            printf '%s\n' "$NOTES"
           } > release-notes.md
           echo "----- release-notes.md -----"
           cat release-notes.md
