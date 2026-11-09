@@ -48,8 +48,8 @@ jobs:
           echo "sdkmanager=$SDKM"
           yes | "$SDKM" --licenses > /dev/null 2>&1 || true
           "$SDKM" --list 2>/dev/null | grep -E "platforms;android-3[5-9]|build-tools;3[5-9]" | tail -10 || true
-          # API 37 目前只在 canary 频道；失败则退回 36 并同步改 compileSdk
-          if ! "$SDKM" --install "platforms;android-37" --channel=3; then
+          # SDK 37 的平台包名带小版本号（android-37.0），不是 android-37
+          if ! "$SDKM" --install "platforms;android-37.0"; then
             "$SDKM" --install "platforms;android-36"
             sed -i 's/compileSdk = 37/compileSdk = 36/' app/build.gradle.kts
           fi
