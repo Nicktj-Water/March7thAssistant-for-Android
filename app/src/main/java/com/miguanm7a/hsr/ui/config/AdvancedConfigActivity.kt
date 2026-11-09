@@ -2,10 +2,12 @@ package com.miguanm7a.hsr.ui.config
 
 import android.os.Bundle
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -58,8 +60,7 @@ import kotlinx.coroutines.withContext
  * 高级配置页：把上游 config.example.yaml 里常用的副本 / 宇宙 / 终局 / 资产 / 活动
  * 配置项做成表单，直接读写 m7a-project/config.yaml。
  *
- * 不放进底部导航，是从「设置」里打开的独立 Activity —— 76 个字段的页面
- * 不适合和 5 个主 Tab 平级。
+ * 两层结构：先选大分类（6 组），进组后再看具体字段 —— 87 项平铺一页太长。
  */
 class AdvancedConfigActivity : AppCompatActivity() {
 
@@ -85,6 +86,7 @@ private fun AdvancedConfigScreen(onBack: () -> Unit) {
     var values by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
     var editing by remember { mutableStateOf<AdvancedField?>(null) }
     var loaded by remember { mutableStateOf(false) }
+    var selectedGroup by remember { mutableStateOf<AdvancedGroup?>(null) }
 
     LaunchedEffect(Unit) {
         values = withContext(Dispatchers.IO) {
@@ -92,6 +94,8 @@ private fun AdvancedConfigScreen(onBack: () -> Unit) {
         }
         loaded = true
     }
+
+    BackHandler(enabled = selectedGroup != null) { selectedGroup = null }
 
     fun save(field: AdvancedField, display: String, onDone: () -> Unit) {
         val ok = AdvancedConfig.update(context, field, display)
@@ -105,17 +109,29 @@ private fun AdvancedConfigScreen(onBack: () -> Unit) {
     }
 
     Column(Modifier.fillMaxSize()) {
+        val group = selectedGroup
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 8.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            TextButton(onClick = onBack) { Text("← 返回") }
-            Text("高级配置", style = MaterialTheme.typography.titleLarge)
+            TextButton(
+                onClick = {
+                    if (group == null) onBack() else selectedGroup = null
+                },
+            ) { Text(if (group == null) "← 返回" else "← 分类") }
+            Text(
+                group?.title ?: "高级配置",
+                style = MaterialTheme.typography.titleLarge,
+            )
             Spacer(Modifier.width(8.dp))
             Text(
-                "${AdvancedConfig.FIELDS.size} 项",
+                if (group == null) {
+                    "${AdvancedConfig.FIELDS.size} 项"
+                } else {
+                    "${AdvancedConfig.fieldsOf(group).size} 项"
+                },
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -126,50 +142,19 @@ private fun AdvancedConfigScreen(onBack: () -> Unit) {
             return@Column
         }
 
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(
-                start = MaaDesignTokens.Spacing.listHorizontal,
-                end = MaaDesignTokens.Spacing.listHorizontal,
-                bottom = 32.dp,
-            ),
-            verticalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.sm),
-        ) {
-            item {
-                MaaCard {
-                    Text(
-                        "这里修改的是上游 config.yaml 的原始键值，保存后下一次运行生效。",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Text(
-                        "App 自己的任务开关、定时、日志等仍在「设置」页；两处互不覆盖。",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-
-            AdvancedGroup.entries.forEach { group ->
-                item(key = "head-${group.name}") {
-                    SectionHeader(group.title)
-                    Text(
-                        group.subtitle,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                items(AdvancedConfig.fieldsOf(group), key = { it.key }) { field ->
-                    FieldRow(
-                        field = field,
-                        value = values[field.key] ?: field.default,
-                        onToggle = { checked ->
-                            save(field, if (checked) "true" else "false") {}
-                        },
-                        onEdit = { editing = field },
-                    )
-                }
-            }
+        if (group == null) {
+            CategoryList(
+                onOpen = { selectedGroup = it },
+            )
+        } else {
+            GroupFields(
+                group = group,
+                values = values,
+                onToggle = { field, checked ->
+                    save(field, if (checked) "true" else "false") {}
+                },
+                onEdit = { editing = it },
+            )
         }
     }
 
@@ -181,6 +166,97 @@ private fun AdvancedConfigScreen(onBack: () -> Unit) {
             onDismiss = { editing = null },
             onSave = { display -> save(field, display) { editing = null } },
         )
+    }
+}
+
+@Composable
+private fun CategoryList(onOpen: (AdvancedGroup) -> Unit) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(
+            start = MaaDesignTokens.Spacing.listHorizontal,
+            end = MaaDesignTokens.Spacing.listHorizontal,
+            bottom = 32.dp,
+        ),
+        verticalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.sm),
+    ) {
+        item {
+            MaaCard {
+                Text(
+                    "这里修改的是上游 config.yaml 的原始键值，保存后下一次运行生效。",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    "App 自己的任务开关、定时、日志等仍在「设置」页；两处互不覆盖。",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+
+        items(AdvancedGroup.entries, key = { it.name }) { group ->
+            val count = AdvancedConfig.fieldsOf(group).size
+            MaaCard(onClick = { onOpen(group) }) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(group.title, style = MaterialTheme.typography.titleMedium)
+                        Spacer(Modifier.height(2.dp))
+                        Text(
+                            group.subtitle,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        "$count 项",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                    Text(
+                        "›",
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun GroupFields(
+    group: AdvancedGroup,
+    values: Map<String, String>,
+    onToggle: (AdvancedField, Boolean) -> Unit,
+    onEdit: (AdvancedField) -> Unit,
+) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(
+            start = MaaDesignTokens.Spacing.listHorizontal,
+            end = MaaDesignTokens.Spacing.listHorizontal,
+            bottom = 32.dp,
+        ),
+        verticalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.sm),
+    ) {
+        item {
+            SectionHeader(group.title)
+            Text(
+                group.subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        items(AdvancedConfig.fieldsOf(group), key = { it.key }) { field ->
+            FieldRow(
+                field = field,
+                value = values[field.key] ?: field.default,
+                onToggle = { checked -> onToggle(field, checked) },
+                onEdit = { onEdit(field) },
+            )
+        }
     }
 }
 
