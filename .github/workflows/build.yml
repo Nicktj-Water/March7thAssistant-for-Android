@@ -44,11 +44,17 @@ jobs:
         run: |
           SDK="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
           echo "SDK=$SDK"
-          SDKM=$(find "$SDK/cmdline-tools" -name sdkmanager -type f | sort | tail -1)
+          SDKM=$(find "$SDK/cmdline-tools" -name sdkmanager | sort | tail -1)
           echo "sdkmanager=$SDKM"
-          yes | "$SDKM" --licenses > /dev/null || true
-          "$SDKM" --install "platforms;android-37"
+          yes | "$SDKM" --licenses > /dev/null 2>&1 || true
+          "$SDKM" --list 2>/dev/null | grep -E "platforms;android-3[5-9]|build-tools;3[5-9]" | tail -10 || true
+          # API 37 目前只在 canary 频道；失败则退回 36 并同步改 compileSdk
+          if ! "$SDKM" --install "platforms;android-37" --channel=3; then
+            "$SDKM" --install "platforms;android-36"
+            sed -i 's/compileSdk = 37/compileSdk = 36/' app/build.gradle.kts
+          fi
           for bt in "build-tools;37.0.0" "build-tools;36.0.0"; do
+            "$SDKM" --install "$bt" --channel=3 && break
             "$SDKM" --install "$bt" && break
           done
           ls "$SDK/platforms" "$SDK/build-tools"
