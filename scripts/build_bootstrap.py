@@ -8,9 +8,12 @@
      data/data/com.termux/files/usr 前缀后并入 stage；
   4. 重新生成 SYMLINKS.txt 并打成
      app/src/main/assets/bootstrap/termux-bootstrap.zip。
+     绝对软链目标保留 Termux 原生前缀（/data/data/com.termux/...），
+     打包后由 reprefix_bootstrap.py 等长替换成 App 包名。
 
 bootstrap 来源三选一（优先级从高到低）：
   --termux-apk PATH / TERMUX_APK      本地 Termux APK
+  已存在的 --bootstrap-src zip         直接复用（--force 时重新生成）
   --download-apk                       自动从 GitHub release 下载 arm64 APK
   --bootstrap-src PATH / M7A_BOOTSTRAP_SRC
                                        已经抽好的 bootstrap-aarch64.zip
@@ -335,9 +338,9 @@ def extract_data_tar(data: bytes, stage: str) -> dict:
                 os.makedirs(dst, exist_ok=True)
                 counts["dir"] += 1
             elif member.issym():
+                # 保留 Termux 原始绝对前缀（/data/data/com.termux/...），
+                # 后续 reprefix_bootstrap.py 会把它等长替换成 App 的包名。
                 target = member.linkname
-                if target.startswith("/data/data/com.termux/files/"):
-                    target = "/" + target[len("/data/data/com.termux/files/"):]
                 _remove(dst)
                 os.symlink(target, dst)
                 counts["symlink"] += 1

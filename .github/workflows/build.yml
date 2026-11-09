@@ -13,6 +13,10 @@ on:
 permissions:
   contents: write
 
+env:
+  ANDROID_HOME: /usr/local/lib/android/sdk
+  ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+
 concurrency:
   group: build-${{ github.ref }}
   cancel-in-progress: true
@@ -36,15 +40,18 @@ jobs:
           distribution: temurin
           java-version: "21"
 
-      - uses: android-actions/setup-android@v3
-
       - name: 安装 Android SDK
         run: |
-          yes | sdkmanager --licenses > /dev/null || true
-          sdkmanager --install "platforms;android-37"
+          SDK="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          echo "SDK=$SDK"
+          SDKM=$(find "$SDK/cmdline-tools" -name sdkmanager -type f | sort | tail -1)
+          echo "sdkmanager=$SDKM"
+          yes | "$SDKM" --licenses > /dev/null || true
+          "$SDKM" --install "platforms;android-37"
           for bt in "build-tools;37.0.0" "build-tools;36.0.0"; do
-            sdkmanager --install "$bt" && break
+            "$SDKM" --install "$bt" && break
           done
+          ls "$SDK/platforms" "$SDK/build-tools"
 
       - uses: actions/setup-python@v5
         with:
@@ -54,6 +61,8 @@ jobs:
         run: python -m pip install --upgrade pip zstandard
 
       - name: 生成 Termux bootstrap（并重打包名 com.m7ahsr）
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           python scripts/build_bootstrap.py --download-apk
           python scripts/reprefix_bootstrap.py app/src/main/assets/bootstrap/termux-bootstrap.zip --in-place --new com.m7ahsr

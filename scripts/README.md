@@ -84,14 +84,26 @@ python scripts/build_bootstrap.py --bootstrap-src build/work/bootstrap/bootstrap
 app/src/main/assets/bootstrap/termux-bootstrap.zip
 ```
 
+拿到 zip 后还要把里面的 Termux 包名换成 App 的包名（当前 `com.m7ahsr`，
+必须等长，否则 ELF 字符串表会错位）：
+
+```bash
+python scripts/reprefix_bootstrap.py \
+  app/src/main/assets/bootstrap/termux-bootstrap.zip \
+  --in-place --new com.m7ahsr
+```
+
 注意：
 
 - 自动下载默认用 Termux **最新稳定版**（当前是 `v0.118.3`）。
   `v0.119.0` 目前是 beta 预发布，tag/文件名不同，别照抄旧文档。
-- 需要固定版本时用 `--apk-tag v0.118.3`；APK 里的 bootstrap 是 arm64 的，
-  脚本只认 `arm64-v8a`（必要时回退 universal）。
+- 需要固定版本时用 `--apk-tag v0.118.3`；脚本只从 APK 里取
+  `lib/arm64-v8a/libtermux-bootstrap.so`，`--download-apk` 也只挑
+  arm64 资产（universal APK 里同样有这个 so，但体积大得多，不推荐）。
 - 依赖清单位于 `M7A_PKG_LIST`，缺失时会自动调用 `resolve_termux_deps.py`。
 - 如果 `.deb` 的 `data.tar` 是 zstd，需要 `pip install zstandard`。
+- `M7A_BOOTSTRAP_SRC` 已存在时会直接复用（优先于 `--download-apk`）。
+  要更新 bootstrap 内容，加 `--force`。
 
 ---
 
@@ -247,7 +259,11 @@ steps:
     run: pip install zstandard
 
   - name: bootstrap
-    run: python scripts/build_bootstrap.py --download-apk
+    run: |
+      python scripts/build_bootstrap.py --download-apk
+      python scripts/reprefix_bootstrap.py \
+        app/src/main/assets/bootstrap/termux-bootstrap.zip \
+        --in-place --new com.m7ahsr
 
   - name: rootfs
     run: |
@@ -284,7 +300,11 @@ CI 建议：
 
 2. **zip 不能存符号链接**
    Android 侧解压不保证还原 symlink，所以 bootstrap 用 `SYMLINKS.txt`，
-   每行格式是 `<链接目标>←<链接路径>`（中间是 U+2190）。改了 bootstrap
+   每行格式是 `<链接目标>←<链接路径>`（中间是 U+2190），链接目标可以是
+   相对路径（如 `coreutils←bin/mkdir`）或绝对路径
+   （`/data/data/com.termux/files/usr/...`）。绝对目标**不要**改成
+   `/usr/...`：bootstrap 安装到 `$PREFIX`，绝对目标必须带完整包名前缀，
+   最后用 `reprefix_bootstrap.py` 等长替换成 App 包名。改了 bootstrap
    内容后必须重新生成这个文件，否则 `python3`、`bash` 等会坏。
 
 3. **权限不能靠解包工具**
@@ -310,12 +330,19 @@ CI 建议：
    不是 zip 里的那份。`make_code_zip.py` 会同时写两个；手工替换资产时
    两个都要更新，否则 App 会报“内置源码包缺少 version.json”。
 
-8. **Termux APK 版本**
+8. **bootstrap 包名必须等长**
+   新包名必须与 `com.termux` 等长（都是 10 字符）。当前 App 包名是
+   `com.m7ahsr`，两者完整前缀都是 31 字节，替换是纯字节操作；
+   改大/改小包名会破坏 ELF 的 `.dynstr`。
+   `TermuxPrefixInvariantTest` 会检查 bootstrap 里是否还残留
+   `com.termux`，以及绝对软链目标是否使用新前缀。
+
+9. **Termux APK 版本**
    默认固定 `v0.118.3` 的 arm64 APK。`v0.119.0` 是 beta.3 预发布，
    release 文件名带 `apt-android-7`，旧 URL 会 404。用 `--apk-tag` 时先
    确认 release 里确实有对应 arm64 资产。
 
-9. **不要重复下载**
+10. **不要重复下载**
    镜像层（`M7A_ROOTFS_SRC`）和 `.deb`（`M7A_CACHE`）都可以复用；
    `--force` 会强制重来，CI 里只在确实需要更新时用。
 
