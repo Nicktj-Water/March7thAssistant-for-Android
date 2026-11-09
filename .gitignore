@@ -1,0 +1,22 @@
+*.iml
+.gradle/
+.idea/
+.kotlin/
+build/
+captures/
+.externalNativeBuild/
+.cxx/
+local.properties
+*.apk
+*.aab
+*.jks
+*.keystore
+
+# 发布签名（个人自用，签名固定才能覆盖安装）
+!app/release.keystore
+
+# 生成的大资产（按 README 第五节可复现地重新生成）
+# 两个文件合计约 537MB，不应进版本库。
+app/src/main/assets/bootstrap/termux-bootstrap.zip
+app/src/main/assets/rootfs/
+app/src/main/assets/code/m7a-code.zip

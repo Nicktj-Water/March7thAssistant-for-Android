@@ -1,0 +1,110 @@
+name: build-apk
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      code_tag:
+        description: "March7thAssistant 源码 tag（留空 = 自动取最新 Release）"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 释放磁盘空间
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android/sdk/ndk /opt/ghc \
+                      /usr/local/share/boost /opt/hostedtoolcache/CodeQL || true
+          df -h /
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - uses: android-actions/setup-android@v3
+
+      - name: 安装 Android SDK
+        run: |
+          yes | sdkmanager --licenses > /dev/null || true
+          sdkmanager --install "platforms;android-37"
+          for bt in "build-tools;37.0.0" "build-tools;36.0.0"; do
+            sdkmanager --install "$bt" && break
+          done
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: 安装打包依赖
+        run: python -m pip install --upgrade pip zstandard
+
+      - name: 生成 Termux bootstrap（并重打包名 com.m7ahsr）
+        run: |
+          python scripts/build_bootstrap.py --download-apk
+          python scripts/reprefix_bootstrap.py app/src/main/assets/bootstrap/termux-bootstrap.zip --in-place --new com.m7ahsr
+          ls -lh app/src/main/assets/bootstrap/
+
+      - name: 拉取并裁剪容器镜像
+        run: |
+          python scripts/pull_image.py
+          python scripts/assemble_rootfs.py --strip /m7a --strip-openvino
+          ls -lh app/src/main/assets/rootfs/
+
+      - name: 打包 M7A 源码
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python scripts/make_code_zip.py --download "${{ inputs.code_tag || 'latest' }}"
+          ls -lh app/src/main/assets/code/
+
+      - name: Gradle 构建
+        run: |
+          chmod +x gradlew
+          ./gradlew :app:assembleRelease --no-daemon --stacktrace \
+            -Dorg.gradle.jvmargs="-Xmx6g -XX:MaxMetaspaceSize=1g"
+
+      - name: 校验产物
+        id: apk
+        run: |
+          set -euo pipefail
+          APK=$(ls app/build/outputs/apk/release/*.apk | head -1)
+          echo "path=$APK" >> "$GITHUB_OUTPUT"
+          ls -lh "$APK"
+          sha256sum "$APK"
+          cp "$APK" m7a-android.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: m7a-android-apk
+          path: m7a-android.apk
+          compression-level: 0
+          retention-days: 30
+
+      - name: 发布 Release
+        if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: apk-${{ github.run_number }}
+          name: "M7A APK #${{ github.run_number }}"
+          body: |
+            自动构建产物。
+            - App version: 2.0.0
+            - M7A code: `${{ inputs.code_tag || 'latest' }}`
+            - Commit: `${{ github.sha }}`
+          files: m7a-android.apk
+          generate_release_notes: false
