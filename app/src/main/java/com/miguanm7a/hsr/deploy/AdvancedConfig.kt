@@ -22,6 +22,7 @@ import android.content.Context
  * - TEAM：每行 `角色名, 位置`，写成 `- - 角色名` / `- 位置`
  * - LEVELS：`起始, 结束`，写成两行列表
  * - LINES：每行一项，写成列表
+ * - RAW：原始 YAML 块（复杂嵌套结构），按原样缩进写回
  */
 object AdvancedConfig {
 
@@ -319,6 +320,62 @@ object AdvancedConfig {
         AdvancedField("activity_realmofthestrange_enable", "异器盈界活动", AdvancedGroup.ACTIVITY, AdvancedType.BOOL, default = "false"),
         AdvancedField("activity_planarfissure_enable", "位面分裂活动", AdvancedGroup.ACTIVITY, AdvancedType.BOOL, default = "false"),
         AdvancedField("activity_journey_highlights_notification_enable", "活动热点通知", AdvancedGroup.ACTIVITY, AdvancedType.BOOL, default = "false"),
+        AdvancedField(
+            "daily_memory_one_team", "回忆一队伍", AdvancedGroup.ACTIVITY, AdvancedType.TEAM,
+            default = "DanHeng, -1\nNatasha, 0\nMarch7th, 0\nAsta, 0",
+            desc = "启用「回忆一」时使用；每行「角色名, 位置」。",
+        ),
+
+        // ── 复合结构（原始 YAML） ─────────────────────────────────────
+        AdvancedField(
+            "power_plan", "体力计划", AdvancedGroup.INSTANCE, AdvancedType.RAW,
+            desc = "按顺序执行的清体力计划，每行一项：[副本类型, 副本名称, 剩余次数]。留空表示使用上面的默认副本。",
+            placeholder = "[]",
+        ),
+        AdvancedField(
+            "instance_teams", "副本指定队伍", AdvancedGroup.INSTANCE, AdvancedType.RAW,
+            desc = "为特定副本指定队伍编号；每行一个映射：instance_name 与 team_number。",
+            placeholder = "- instance_name: \"拟造花萼（金）\"\n  team_number: 1",
+        ),
+        AdvancedField(
+            "borrow_friends", "支援角色好友", AdvancedGroup.INSTANCE, AdvancedType.RAW,
+            desc = "借用支援角色的好友列表，每行一项：[角色名, 好友备注]；没有时用 \"None\"。",
+            placeholder = "- [\"March7th\", \"赵相机\"]",
+        ),
+        AdvancedField(
+            "daily_tasks", "每日实训任务状态", AdvancedGroup.ACTIVITY, AdvancedType.RAW,
+            desc = "上游记录的每日实训任务完成状态（映射）。一般由程序自动维护，手动清空为 [] 可强制重跑。",
+            placeholder = "[]",
+        ),
+        AdvancedField(
+            "scheduled_tasks", "定时任务列表", AdvancedGroup.MISC, AdvancedType.RAW,
+            desc = "图形界面用的定时任务；每项包含 id/name/time/weekdays/program/args 等字段。云游戏模式下 App 内请优先用「设置 → 定时」。",
+            placeholder = "- id: \"uuid\"\n  name: \"每日完整运行\"\n  time: \"04:30\"\n  program: \"self\"\n  args: \"main\"",
+        ),
+        AdvancedField(
+            "notify_template", "通知模板", AdvancedGroup.MISC, AdvancedType.RAW,
+            desc = "消息推送的标题与正文模板（映射），支持 {time}/{power}/{error} 等占位符。",
+            placeholder = "Title: \"三月七小助手\"\nFullTime: \"开拓力剩余{power}/300\"",
+        ),
+        AdvancedField(
+            "browser_mirror_urls", "浏览器镜像地址", AdvancedGroup.MISC, AdvancedType.RAW,
+            desc = "下载 Chrome / chromedriver / EdgeDriver 的镜像根地址（映射）。",
+            placeholder = "chrome: \"https://registry.npmmirror.com/-/binary/chrome-for-testing/\"",
+        ),
+        AdvancedField(
+            "pypi_mirror_urls", "PyPI 镜像列表", AdvancedGroup.MISC, AdvancedType.LINES,
+            default = "https://mirrors.cloud.tencent.com/pypi/simple/\nhttps://mirrors.aliyun.com/pypi/simple/\nhttps://pypi.org/simple/",
+            desc = "依赖同步失败时依次尝试的 PyPI 镜像，每行一个。",
+        ),
+        AdvancedField(
+            "browser_launch_argument", "浏览器额外参数", AdvancedGroup.MISC, AdvancedType.LINES,
+            desc = "追加给 Chromium 的启动参数，每行一个，例如 --auto-open-devtools-for-tabs。",
+            placeholder = "--auto-open-devtools-for-tabs",
+        ),
+        AdvancedField(
+            "already_used_codes", "已使用兑换码", AdvancedGroup.MISC, AdvancedType.LINES,
+            desc = "记录已兑换过的码，避免重复尝试；清空后下次运行会重新尝试。",
+        ),
     )
 
     fun fieldsOf(group: AdvancedGroup): List<AdvancedField> = FIELDS.filter { it.group == group }
@@ -362,6 +419,7 @@ object AdvancedConfig {
             AdvancedType.TEAM -> parseTeam(blockOf(lines, field.key)) ?: field.default
             AdvancedType.LEVELS -> parseLevels(blockOf(lines, field.key)) ?: field.default
             AdvancedType.LINES -> parseLines(blockOf(lines, field.key)) ?: field.default
+            AdvancedType.RAW -> rawBlockOf(lines, field.key) ?: field.default.ifBlank { "[]" }
         }
     }
 
@@ -375,6 +433,16 @@ object AdvancedConfig {
             i++
         }
         return out
+    }
+
+    /** RAW 字段：取顶层键的原始 YAML 内容；行内值（如 `[]`）直接返回，块内容去掉 2 格基础缩进。 */
+    private fun rawBlockOf(lines: List<String>, key: String): String? {
+        val idx = lines.indexOfFirst { topKeyOf(it) == key }
+        if (idx < 0) return null
+        val inline = inlineValue(lines, key)
+        if (!inline.isNullOrEmpty()) return inline
+        val body = blockOf(lines, key) ?: return ""
+        return body.joinToString("\n") { it.removePrefix("  ") }
     }
 
     private fun inlineValue(lines: List<String>, key: String): String? {
@@ -456,6 +524,19 @@ object AdvancedConfig {
                     }
                 buildBlock(field.key, items.map { "  $it" })
             }
+            AdvancedType.RAW -> {
+                val body = display.trim()
+                if (body.isEmpty() || body == "[]") {
+                    "${field.key}: []"
+                } else {
+                    buildString {
+                        append(field.key).append(':')
+                        for (line in body.split('\n')) {
+                            append('\n').append("  ").append(line)
+                        }
+                    }
+                }
+            }
             AdvancedType.TEAM -> {
                 val items = display.split('\n').map { it.trim() }.filter { it.isNotEmpty() }
                     .mapNotNull { line ->
@@ -525,10 +606,11 @@ enum class AdvancedGroup(val title: String, val subtitle: String) {
     UNIVERSE("模拟宇宙 / 差分 / 货币战争", "运行方式、命途、站点优先级、积分奖励"),
     ENDGAME("忘却 / 虚构 / 末日", "三模式开关、关卡范围与队伍"),
     ASSET("资产与兑换码", "每月兑换、光锥叠加、兑换码"),
-    ACTIVITY("活动", "花藏繁生、异器盈界、位面分裂"),
+    ACTIVITY("活动", "花藏繁生、异器盈界、位面分裂、每日实训"),
+    MISC("其他与原始 YAML", "定时任务、通知模板、镜像与调试参数"),
 }
 
-enum class AdvancedType { BOOL, INT, ENUM, TEXT, MAP, TEAM, LEVELS, LINES }
+enum class AdvancedType { BOOL, INT, ENUM, TEXT, MAP, TEAM, LEVELS, LINES, RAW }
 
 data class AdvancedField(
     val key: String,

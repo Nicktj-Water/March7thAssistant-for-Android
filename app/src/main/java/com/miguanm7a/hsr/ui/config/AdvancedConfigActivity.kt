@@ -221,6 +221,10 @@ private fun summary(field: AdvancedField, value: String): String {
     return when (field.type) {
         AdvancedType.BOOL -> if (value == "true") "已开启" else "已关闭"
         AdvancedType.ENUM -> field.options.firstOrNull { it.first == value }?.second ?: value
+        AdvancedType.RAW -> {
+            val n = value.split('\n').count { it.isNotBlank() }
+            if (n == 0) "（空 · 使用默认）" else "原始 YAML · $n 行"
+        }
         AdvancedType.MAP, AdvancedType.TEAM, AdvancedType.LINES -> {
             val lines = value.split('\n').filter { it.isNotBlank() }
             when {
@@ -280,10 +284,12 @@ private fun EditDialog(
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = field.type == AdvancedType.INT ||
                             field.type == AdvancedType.TEXT,
-                        minLines = if (field.type == AdvancedType.MAP ||
-                            field.type == AdvancedType.TEAM ||
-                            field.type == AdvancedType.LINES
-                        ) 6 else 1,
+                        minLines = when (field.type) {
+                            AdvancedType.RAW -> 10
+                            AdvancedType.MAP, AdvancedType.TEAM,
+                            AdvancedType.LINES, AdvancedType.LEVELS -> 6
+                            else -> 1
+                        },
                         placeholder = { Text(field.placeholder.ifBlank { field.default }) },
                         keyboardOptions = KeyboardOptions(
                             keyboardType = if (field.type == AdvancedType.INT) {
