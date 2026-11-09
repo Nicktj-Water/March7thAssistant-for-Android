@@ -308,7 +308,7 @@ object DeployScripts {
             appendLine("fi")
         }
         appendLine("if command -v chromium >/dev/null 2>&1; then")
-        appendLine("  echo \"    Chromium: ${D}(chromium --version 2>&1 | head -1)\"")
+        appendLine("  echo \"    Chromium: ${D}(chromium --version 2>&1 | tail -1)\"")
         appendLine("else")
         appendLine("  echo \"    [警告] 未找到 chromium，云游戏模式将无法启动\"")
         appendLine("fi")
