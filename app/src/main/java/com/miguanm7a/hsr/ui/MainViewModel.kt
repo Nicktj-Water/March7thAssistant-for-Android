@@ -37,6 +37,15 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+enum class UpdateOutcome { UP_TO_DATE, AVAILABLE, ERROR }
+
+/** 一次「检查更新」的结果，首页用它弹即时对话框。 */
+data class UpdateCheckUi(
+    val outcome: UpdateOutcome,
+    val tag: String = "",
+    val message: String? = null,
+)
+
 data class UiState(
     val runtimeReady: Boolean = false,
     val rootfsReady: Boolean = false,
@@ -62,6 +71,7 @@ data class UiState(
     val updateError: String? = null,
     val releaseNotes: String? = null,
     val releasePage: String? = null,
+    val updateCheck: UpdateCheckUi? = null,
 )
 
 class MainViewModel(app: Application) : AndroidViewModel(app) {
@@ -459,6 +469,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                                     latestCodeTag = result.release.tag,
                                     releaseNotes = result.release.notes,
                                     releasePage = result.release.pageUrl,
+                                    updateCheck = UpdateCheckUi(
+                                        UpdateOutcome.AVAILABLE,
+                                        result.release.tag,
+                                    ),
                                 )
                             }
                             appendLog(
@@ -475,6 +489,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                                     latestCodeTag = null,
                                     releaseNotes = null,
                                     releasePage = null,
+                                    updateCheck = UpdateCheckUi(UpdateOutcome.UP_TO_DATE, result.tag),
                                 )
                             }
                             appendLog("已是最新版本（${result.tag}）", LogLevel.OK)
@@ -482,10 +497,24 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                     }
                 }
                 .onFailure {
-                    _ui.update { s -> s.copy(checkingUpdate = false, updateError = it.message) }
+                    _ui.update { s ->
+                        s.copy(
+                            checkingUpdate = false,
+                            updateError = it.message,
+                            updateCheck = UpdateCheckUi(
+                                UpdateOutcome.ERROR,
+                                message = it.message,
+                            ),
+                        )
+                    }
                     appendLog("检查更新失败：${it.message}", LogLevel.ERROR)
                 }
         }
+    }
+
+    /** 关闭「检查更新」的结果对话框。 */
+    fun dismissUpdateCheck() {
+        _ui.update { it.copy(updateCheck = null) }
     }
 
     /** 下载并安装待更新的源码；依赖清单变化时会自动在容器内同步一次。 */
@@ -518,6 +547,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                         updating = false,
                         latestCodeTag = null,
                         releaseNotes = null,
+                        updateCheck = null,
                         installedCodeTag = CodeInstaller.installedTag(app).orEmpty(),
                     )
                 }

@@ -1,5 +1,9 @@
 package com.miguanm7a.hsr.ui.screens
 
+import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -67,6 +71,16 @@ fun DeployScreen(vm: MainViewModel) {
                 )
             } else {
                 steps.forEach { step ->
+                    val stepColor by animateColorAsState(
+                        targetValue = when (step.state) {
+                            StepState.DONE -> OkColor
+                            StepState.FAILED -> ErrColor
+                            StepState.RUNNING -> MaterialTheme.colorScheme.primary
+                            else -> MaterialTheme.colorScheme.onSurfaceVariant
+                        },
+                        animationSpec = tween(200),
+                        label = "stepColor",
+                    )
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         when (step.state) {
                             StepState.RUNNING -> SmallSpinner()
@@ -77,13 +91,7 @@ fun DeployScreen(vm: MainViewModel) {
                                     StepState.SKIPPED -> "–"
                                     else -> "○"
                                 },
-                                color = when (step.state) {
-                                    StepState.DONE -> OkColor
-                                    StepState.FAILED -> ErrColor
-                                    StepState.SKIPPED -> MaterialTheme.colorScheme.onSurfaceVariant
-                                    StepState.RUNNING -> MaterialTheme.colorScheme.primary
-                                    else -> MaterialTheme.colorScheme.onSurfaceVariant
-                                },
+                                color = stepColor,
                             )
                         }
                         Spacer(Modifier.size(MaaDesignTokens.Spacing.md))
@@ -101,9 +109,17 @@ fun DeployScreen(vm: MainViewModel) {
                 }
             }
             if (deploy.running) {
+                val animatedProgress by animateFloatAsState(
+                    targetValue = deploy.overallProgress / 100f,
+                    animationSpec = tween(
+                        durationMillis = 400,
+                        easing = CubicBezierEasing(0.23f, 1f, 0.32f, 1f),
+                    ),
+                    label = "deployProgress",
+                )
                 Spacer(Modifier.height(MaaDesignTokens.Spacing.sm))
                 LinearProgressIndicator(
-                    progress = { deploy.overallProgress / 100f },
+                    progress = { animatedProgress },
                     modifier = Modifier.fillMaxWidth(),
                 )
             }

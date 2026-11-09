@@ -1,5 +1,20 @@
 package com.miguanm7a.hsr.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -16,6 +31,7 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material3.Button
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
@@ -23,19 +39,24 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.miguanm7a.hsr.ui.MainViewModel
+import com.miguanm7a.hsr.ui.UpdateOutcome
 import com.miguanm7a.hsr.ui.components.InfoRow
 import com.miguanm7a.hsr.ui.components.LoginQrCard
 import com.miguanm7a.hsr.ui.components.MaaCard
 import com.miguanm7a.hsr.ui.components.SectionHeader
+import com.miguanm7a.hsr.ui.components.SmallSpinner
+import com.miguanm7a.hsr.ui.components.pressScale
 import com.miguanm7a.hsr.ui.theme.MaaDesignTokens
 import com.miguanm7a.hsr.ui.theme.OkColor
 import com.miguanm7a.hsr.ui.theme.WarnColor
@@ -50,6 +71,86 @@ fun HomeScreen(
     val ui by vm.ui.collectAsState()
     val deploy by vm.deployState.collectAsState()
     val qr by vm.qr.collectAsState()
+
+    val check = ui.updateCheck
+    if (check != null) {
+        AlertDialog(
+            onDismissRequest = { vm.dismissUpdateCheck() },
+            title = {
+                Text(
+                    when (check.outcome) {
+                        UpdateOutcome.UP_TO_DATE -> "已是最新版本"
+                        UpdateOutcome.AVAILABLE -> "发现新版本 ${check.tag}"
+                        UpdateOutcome.ERROR -> "检查更新失败"
+                    }
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.sm)) {
+                    when (check.outcome) {
+                        UpdateOutcome.UP_TO_DATE -> Text(
+                            "当前已安装 ${ui.installedCodeTag.ifBlank { "未安装" }}，" +
+                                "与上游最新 Release（${check.tag}）一致。"
+                        )
+
+                        UpdateOutcome.AVAILABLE -> {
+                            Text(
+                                "当前 ${ui.installedCodeTag.ifBlank { "未安装" }} → " +
+                                    "最新 ${check.tag}"
+                            )
+                            if (!ui.releaseNotes.isNullOrBlank()) {
+                                Text(
+                                    ui.releaseNotes.orEmpty().take(400),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+
+                        UpdateOutcome.ERROR -> Text(
+                            check.message ?: "网络请求失败，请检查网络后重试。"
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                when (check.outcome) {
+                    UpdateOutcome.AVAILABLE -> Button(
+                        onClick = {
+                            vm.applyUpdate()
+                            vm.dismissUpdateCheck()
+                        }
+                    ) { Text("立即更新") }
+
+                    UpdateOutcome.UP_TO_DATE -> TextButton(
+                        onClick = { vm.dismissUpdateCheck() }
+                    ) { Text("知道了") }
+
+                    UpdateOutcome.ERROR -> TextButton(
+                        onClick = {
+                            vm.dismissUpdateCheck()
+                            vm.checkUpdate()
+                        }
+                    ) { Text("重试") }
+                }
+            },
+            dismissButton = {
+                if (check.outcome == UpdateOutcome.AVAILABLE) {
+                    TextButton(onClick = { vm.dismissUpdateCheck() }) { Text("稍后") }
+                }
+            },
+        )
+    }
+
+    val runningPulse by rememberInfiniteTransition(label = "runningPulse").animateFloat(
+        initialValue = 1f,
+        targetValue = 0.4f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 900, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "runningAlpha",
+    )
 
     Column(
         modifier = Modifier
@@ -78,7 +179,7 @@ fun HomeScreen(
         Spacer(Modifier.height(MaaDesignTokens.Spacing.sm))
 
         // ---------------- 状态卡片 ----------------
-        MaaCard {
+        MaaCard(modifier = Modifier.animateContentSize(tween(200))) {
             Text("运行状态", style = MaterialTheme.typography.titleMedium)
             InfoRow(
                 "Termux 运行时",
@@ -95,7 +196,7 @@ fun HomeScreen(
                 InfoRow(
                     "执行中",
                     ui.runningTaskName ?: "任务",
-                    valueColor = MaterialTheme.colorScheme.primary,
+                    valueColor = MaterialTheme.colorScheme.primary.copy(alpha = runningPulse),
                 )
             }
         }
@@ -132,6 +233,10 @@ fun HomeScreen(
                     modifier = Modifier.weight(1f),
                     enabled = !ui.checkingUpdate && !ui.updating,
                 ) {
+                    if (ui.checkingUpdate) {
+                        SmallSpinner()
+                        Spacer(Modifier.size(8.dp))
+                    }
                     Text(if (ui.checkingUpdate) "检查中…" else "检查更新")
                 }
                 Button(
@@ -150,26 +255,40 @@ fun HomeScreen(
                     Text("重试依赖同步")
                 }
             }
-            if (!ui.releaseNotes.isNullOrBlank()) {
-                Text(
-                    "更新说明（${ui.latestCodeTag}）",
-                    style = MaterialTheme.typography.labelMedium,
-                )
-                Text(
-                    ui.releaseNotes.orEmpty(),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 8,
-                )
+            AnimatedVisibility(
+                visible = !ui.releaseNotes.isNullOrBlank(),
+                enter = fadeIn(tween(180)) + expandVertically(tween(220)),
+                exit = fadeOut(tween(120)) + shrinkVertically(tween(180)),
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        "更新说明（${ui.latestCodeTag}）",
+                        style = MaterialTheme.typography.labelMedium,
+                    )
+                    Text(
+                        ui.releaseNotes.orEmpty(),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 8,
+                    )
+                }
             }
         }
 
         // 部署进行中时展示总进度
         if (deploy.running) {
+            val animatedProgress by animateFloatAsState(
+                targetValue = deploy.overallProgress / 100f,
+                animationSpec = tween(
+                    durationMillis = 400,
+                    easing = CubicBezierEasing(0.23f, 1f, 0.32f, 1f),
+                ),
+                label = "deployProgress",
+            )
             MaaCard {
                 Text("部署进行中", style = MaterialTheme.typography.titleMedium)
                 LinearProgressIndicator(
-                    progress = { deploy.overallProgress / 100f },
+                    progress = { animatedProgress },
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Text(
@@ -188,10 +307,16 @@ fun HomeScreen(
         )
 
         // ---------------- 主操作 ----------------
+        val deployPress = remember { MutableInteractionSource() }
+        val runPress = remember { MutableInteractionSource() }
         if (!ui.runtimeReady || !ui.deployed) {
             Button(
                 onClick = onGoDeploy,
-                modifier = Modifier.fillMaxWidth().height(52.dp),
+                interactionSource = deployPress,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp)
+                    .pressScale(deployPress),
                 enabled = !deploy.running,
             ) {
                 Text("一键部署", style = MaterialTheme.typography.titleMedium)
@@ -200,7 +325,11 @@ fun HomeScreen(
 
         Button(
             onClick = { vm.runSelectedTask() },
-            modifier = Modifier.fillMaxWidth().height(52.dp),
+            interactionSource = runPress,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(52.dp)
+                .pressScale(runPress),
             enabled = ui.runtimeReady && !ui.runningTask,
             colors = ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.primary,

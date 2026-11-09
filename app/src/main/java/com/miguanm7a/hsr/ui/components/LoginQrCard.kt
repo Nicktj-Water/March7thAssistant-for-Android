@@ -1,6 +1,10 @@
 package com.miguanm7a.hsr.ui.components
 
 import android.graphics.BitmapFactory
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -23,6 +27,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -32,6 +37,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -59,7 +65,7 @@ fun LoginQrCard(
 ) {
     var zoomed by remember { mutableStateOf(false) }
 
-    MaaCard(modifier = modifier) {
+    MaaCard(modifier = modifier.animateContentSize(tween(220))) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
                 Icons.Filled.QrCode2,
@@ -110,11 +116,30 @@ fun LoginQrCard(
             color = OkColor,
         )
 
+        // 二维码出现/刷新时轻微放大淡入，让「扫这里」的变化被注意到
+        val appear = remember { Animatable(0f) }
+        LaunchedEffect(qr.revision) {
+            appear.snapTo(0f)
+            appear.animateTo(
+                targetValue = 1f,
+                animationSpec = tween(
+                    durationMillis = 220,
+                    easing = CubicBezierEasing(0.23f, 1f, 0.32f, 1f),
+                ),
+            )
+        }
+
         // 二维码需要留白才容易被扫到，所以加白底 + 内边距
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = MaaDesignTokens.Spacing.sm)
+                .graphicsLayer {
+                    alpha = appear.value
+                    val s = 0.96f + 0.04f * appear.value
+                    scaleX = s
+                    scaleY = s
+                }
                 .clip(RoundedCornerShape(MaaDesignTokens.CornerRadius.inner))
                 .background(Color.White)
                 .padding(MaaDesignTokens.Spacing.lg)

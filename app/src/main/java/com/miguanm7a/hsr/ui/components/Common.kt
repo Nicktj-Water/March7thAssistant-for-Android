@@ -1,6 +1,11 @@
 package com.miguanm7a.hsr.ui.components
 
+import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -15,9 +20,11 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.miguanm7a.hsr.ui.theme.MaaDesignTokens
@@ -98,5 +105,29 @@ fun SmallSpinner(modifier: Modifier = Modifier) {
     CircularProgressIndicator(
         modifier = modifier.size(16.dp),
         strokeWidth = 2.dp,
+    )
+}
+
+
+/** 主操作按钮的按压反馈：按下缩到 97%，松开回弹，120ms。 */
+@Composable
+fun Modifier.pressScale(
+    interactionSource: MutableInteractionSource,
+    pressedScale: Float = 0.97f,
+): Modifier {
+    val pressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (pressed) pressedScale else 1f,
+        animationSpec = tween(
+            durationMillis = 120,
+            easing = CubicBezierEasing(0.23f, 1f, 0.32f, 1f),
+        ),
+        label = "pressScale",
+    )
+    return this.then(
+        Modifier.graphicsLayer {
+            scaleX = scale
+            scaleY = scale
+        }
     )
 }
