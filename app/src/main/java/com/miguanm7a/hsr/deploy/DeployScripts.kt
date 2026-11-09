@@ -291,7 +291,7 @@ object DeployScripts {
         if (projectMounted) {
             appendLine("if [ -f $CONTAINER_APP_DIR/main.py ]; then")
             appendLine("  echo \"    项目    : $CONTAINER_APP_DIR（已挂载源码）\"")
-            appendLine("  echo \"    版本    : ${D}($CONTAINER_VENV/bin/python -c \\\"import json;print(json.load(open('$CONTAINER_APP_DIR/version.json'))['tag'])\\\" 2>/dev/null || echo unknown)\"")
+            appendLine("  echo \"    版本    : ${D}($CONTAINER_VENV/bin/python -c 'import json;print(json.load(open(\"$CONTAINER_APP_DIR/version.json\"))[\"tag\"])' 2>/dev/null || echo unknown)\"")
             appendLine("else")
             appendLine("  fail deps \"源码未挂载：$CONTAINER_APP_DIR/main.py 不存在\"; exit 1")
             appendLine("fi")
@@ -302,7 +302,7 @@ object DeployScripts {
         appendLine("  echo \"    [警告] 未找到 chromium，云游戏模式将无法启动\"")
         appendLine("fi")
         appendLine("if [ -x $CONTAINER_VENV/bin/python ]; then")
-        appendLine("  echo \"    依赖自检: ${D}($CONTAINER_VENV/bin/python -c 'import selenium, cv2, numpy, rapidocr; print(\\\"selenium/opencv/numpy/rapidocr OK\\\")' 2>&1 | tail -2)\"")
+        appendLine("  echo \"    依赖自检: ${D}($CONTAINER_VENV/bin/python -c 'import selenium, cv2, numpy, rapidocr; print(\"selenium/opencv/numpy/rapidocr OK\")' 2>&1 | tail -2)\"")
         appendLine("fi")
         appendLine()
 
