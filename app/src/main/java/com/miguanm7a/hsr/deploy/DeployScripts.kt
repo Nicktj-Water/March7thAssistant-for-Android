@@ -276,6 +276,8 @@ object DeployScripts {
         appendLine("ok()   { echo \"$MARK_DONE${D}1\"; }")
         appendLine("fail() { echo \"$MARK_FAIL${D}1:${D}2\"; }")
         appendLine("export DEBIAN_FRONTEND=noninteractive")
+        appendLine("export HOME=/root")
+        appendLine("export TMPDIR=/tmp")
         appendLine("export PATH=$CONTAINER_VENV/bin:${D}PATH")
         appendLine("export LANG=C.UTF-8")
         appendLine("ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime 2>/dev/null || true")
@@ -380,7 +382,7 @@ object DeployScripts {
      * @param guestProjectDir 宿主工程目录的容器可见路径
      */
     fun syncDepsAfterUpdate(alias: String, guestProjectDir: String): String =
-        "exec proot-distro login ${bindArgs(guestProjectDir)}$alias -- /bin/bash -lc " +
+        "exec proot-distro login ${bindArgs(guestProjectDir)}$alias -- /usr/bin/env -i HOME=/root TMPDIR=/tmp LANG=C.UTF-8 PATH=/usr/local/bin:/usr/bin:/bin /bin/bash -lc " +
             "'cd $CONTAINER_APP_DIR && export UV_PROJECT_ENVIRONMENT=$CONTAINER_VENV && " +
             "($CONTAINER_UV sync --only-group docker " +
             "|| UV_INDEX_URL=https://mirrors.cloud.tencent.com/pypi/simple/ $CONTAINER_UV sync --only-group docker)'"
@@ -400,7 +402,7 @@ object DeployScripts {
         val taskArg = task.arg?.let { " $it" } ?: ""
         return buildString {
             append("exec proot-distro login ").append(binds).append(alias)
-                .append(" -- /usr/bin/env")
+                .append(" -- /usr/bin/env -i HOME=/root TMPDIR=/tmp LANG=C.UTF-8")
             append(" MARCH7TH_AFTER_FINISH=").append(afterFinish.value)
             append(" MARCH7TH_LOG_LEVEL=").append(logLevel)
             append(" MARCH7TH_CLOUD_GAME_ENABLE=true")
@@ -442,7 +444,7 @@ object DeployScripts {
             appendLine("  PROOT_EXTRA=\"${D}(cat \"${D}HOME/m7a-shared/proot-env\")\"")
             appendLine("fi")
             appendLine()
-            appendLine("exec env ${D}PROOT_EXTRA proot-distro login ${binds}$alias -- /usr/bin/env \\")
+            appendLine("exec env ${D}PROOT_EXTRA proot-distro login ${binds}$alias -- /usr/bin/env -i HOME=/root TMPDIR=/tmp LANG=C.UTF-8 \\")
             appendLine("  MARCH7TH_AFTER_FINISH=${afterFinish.value} \\")
             appendLine("  MARCH7TH_LOG_LEVEL=$logLevel \\")
             appendLine("  MARCH7TH_CLOUD_GAME_ENABLE=true \\")
