@@ -28,6 +28,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: 释放磁盘空间
         run: |
@@ -131,16 +133,31 @@ jobs:
           compression-level: 0
           retention-days: 30
 
+      - name: 生成版本号与发布说明
+        id: meta
+        run: |
+          set -euo pipefail
+          VERSION=$(sed -n 's/.*versionName = "\([^"]*\)".*/\1/p' app/build.gradle.kts | head -1)
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          PREV=$(git tag -l 'apk-*' --sort=-v:refname | head -1 || true)
+          {
+            echo "**本次更新**"
+            echo
+            if [ -n "$PREV" ]; then
+              git log "$PREV..HEAD" --no-merges --pretty='- %s' | head -8
+            else
+              git log -8 --no-merges --pretty='- %s'
+            fi
+          } > release-notes.md
+          echo "----- release-notes.md -----"
+          cat release-notes.md
+
       - name: 发布 Release
         if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: apk-${{ github.run_number }}
-          name: "M7A APK #${{ github.run_number }}"
-          body: |
-            自动构建产物。
-            - App version: 2.0.0
-            - M7A code: `${{ inputs.code_tag || 'latest' }}`
-            - Commit: `${{ github.sha }}`
+          name: "M7A-For-Android ${{ steps.meta.outputs.version }}"
+          body_path: release-notes.md
           files: m7a-android.apk
           generate_release_notes: false
