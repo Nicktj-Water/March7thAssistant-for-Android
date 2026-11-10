@@ -97,6 +97,12 @@ class Registry:
             try:
                 return urllib.request.urlopen(request, timeout=timeout)
             except urllib.error.HTTPError as e:
+                if e.code >= 500:
+                    last = e
+                    if attempt < 3:
+                        log(f"  镜像站 {e.code}，{attempt + 1}/3 后重试")
+                        time.sleep(5 * (attempt + 1))
+                    continue
                 if e.code != 401:
                     raise
                 self._login(e.headers.get("WWW-Authenticate", ""))

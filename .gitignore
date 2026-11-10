@@ -20,3 +20,7 @@ local.properties
 app/src/main/assets/bootstrap/termux-bootstrap.zip
 app/src/main/assets/rootfs/
 app/src/main/assets/code/m7a-code.zip
+
+# Python 缓存
+__pycache__/
+*.pyc

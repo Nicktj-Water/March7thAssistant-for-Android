@@ -79,7 +79,7 @@ jobs:
 
       - name: 拉取并裁剪容器镜像
         run: |
-          python scripts/pull_image.py
+          python scripts/pull_image.py || python scripts/pull_image.py --mirror ghcr.io
           python scripts/assemble_rootfs.py --strip /m7a --strip-openvino
           ls -lh app/src/main/assets/rootfs/
 
