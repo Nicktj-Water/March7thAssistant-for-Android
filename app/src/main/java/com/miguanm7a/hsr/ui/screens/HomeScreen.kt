@@ -1,5 +1,9 @@
 package com.miguanm7a.hsr.ui.screens
 
+import android.content.ClipData
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.CubicBezierEasing
@@ -14,10 +18,13 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -25,6 +32,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
@@ -46,9 +54,12 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.miguanm7a.hsr.deploy.UpstreamGapChecker
+import com.miguanm7a.hsr.ui.AppUpdateOutcome
 import com.miguanm7a.hsr.ui.MainViewModel
 import com.miguanm7a.hsr.ui.UpdateOutcome
 import com.miguanm7a.hsr.ui.components.InfoRow
@@ -67,10 +78,12 @@ fun HomeScreen(
     vm: MainViewModel,
     onGoDeploy: () -> Unit,
     onOpenTerminal: () -> Unit,
+    onOpenLogs: () -> Unit,
 ) {
     val ui by vm.ui.collectAsState()
     val deploy by vm.deployState.collectAsState()
     val qr by vm.qr.collectAsState()
+    val context = LocalContext.current
 
     val check = ui.updateCheck
     if (check != null) {
@@ -111,6 +124,49 @@ fun HomeScreen(
                             check.message ?: "网络请求失败，请检查网络后重试。"
                         )
                     }
+
+                    val gap = ui.gapReport
+                    if (gap != null) {
+                        if (gap.warning != null && gap.isEmpty) {
+                            Text(
+                                gap.warning,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = WarnColor,
+                            )
+                        } else if (!gap.isEmpty) {
+                            Text(
+                                "上游新增（相对构建基线 ${gap.baselineTag ?: "未知"}）",
+                                style = MaterialTheme.typography.labelMedium,
+                            )
+                            if (gap.newConfigKeys.isNotEmpty()) {
+                                Text("配置键", style = MaterialTheme.typography.labelSmall)
+                                gap.newConfigKeys.take(10).forEach { item ->
+                                    Text(
+                                        "· ${item.name}  ${if (item.supported) "已支持" else "未支持"}",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = if (item.supported) OkColor else WarnColor,
+                                    )
+                                }
+                            }
+                            if (gap.newTasks.isNotEmpty()) {
+                                Text("任务", style = MaterialTheme.typography.labelSmall)
+                                gap.newTasks.take(10).forEach { item ->
+                                    Text(
+                                        "· ${item.name}  ${if (item.supported) "已支持" else "未支持"}",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = if (item.supported) OkColor else WarnColor,
+                                    )
+                                }
+                            }
+                            TextButton(onClick = { copyGap(context, gap) }) { Text("复制清单") }
+                        } else {
+                            Text(
+                                "上游没有新增配置键或任务。",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
                 }
             },
             confirmButton = {
@@ -137,6 +193,75 @@ fun HomeScreen(
             dismissButton = {
                 if (check.outcome == UpdateOutcome.AVAILABLE) {
                     TextButton(onClick = { vm.dismissUpdateCheck() }) { Text("稍后") }
+                }
+            },
+        )
+    }
+
+    val appCheck = ui.appUpdateCheck
+    if (appCheck != null) {
+        AlertDialog(
+            onDismissRequest = { vm.dismissAppUpdateCheck() },
+            title = {
+                Text(
+                    when (appCheck.outcome) {
+                        AppUpdateOutcome.UP_TO_DATE -> "App 已是最新版本"
+                        AppUpdateOutcome.AVAILABLE -> "发现新版 App ${appCheck.version}"
+                        AppUpdateOutcome.ERROR -> "检查 App 更新失败"
+                    }
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.sm)) {
+                    when (appCheck.outcome) {
+                        AppUpdateOutcome.UP_TO_DATE -> Text("当前 ${ui.version}，已是最新。")
+                        AppUpdateOutcome.AVAILABLE -> {
+                            Text("当前 ${ui.version} → 最新 ${appCheck.version}")
+                            if (!appCheck.notes.isNullOrBlank()) {
+                                Text(
+                                    appCheck.notes,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 10,
+                                )
+                            }
+                            Text(
+                                "HyperOS 不允许后台静默安装，请到 Release 页手动下载安装。",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+
+                        AppUpdateOutcome.ERROR -> Text(
+                            appCheck.message ?: "网络请求失败，请检查网络后重试。"
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                when (appCheck.outcome) {
+                    AppUpdateOutcome.AVAILABLE -> Button(
+                        onClick = {
+                            openUrl(context, appCheck.pageUrl)
+                            vm.dismissAppUpdateCheck()
+                        },
+                    ) { Text("打开下载页") }
+
+                    AppUpdateOutcome.UP_TO_DATE -> TextButton(
+                        onClick = { vm.dismissAppUpdateCheck() },
+                    ) { Text("知道了") }
+
+                    AppUpdateOutcome.ERROR -> TextButton(
+                        onClick = {
+                            vm.dismissAppUpdateCheck()
+                            vm.checkAppUpdate()
+                        },
+                    ) { Text("重试") }
+                }
+            },
+            dismissButton = {
+                if (appCheck.outcome != AppUpdateOutcome.UP_TO_DATE) {
+                    TextButton(onClick = { vm.dismissAppUpdateCheck() }) { Text("关闭") }
                 }
             },
         )
@@ -203,17 +328,32 @@ fun HomeScreen(
 
         // ---------------- 版本 / 检查更新 ----------------
         MaaCard {
-            Text("March7thAssistant 版本", style = MaterialTheme.typography.titleMedium)
-            InfoRow(
-                "已安装",
-                ui.installedCodeTag.ifBlank { "未安装（请先部署）" },
+            Text("版本与更新", style = MaterialTheme.typography.titleMedium)
+            VersionRow(
+                label = "上游代码",
+                value = ui.installedCodeTag.ifBlank { "未安装（请先部署）" },
                 valueColor = if (ui.installedCodeTag.isBlank()) WarnColor else OkColor,
+                dot = ui.codeUpdateDot,
+                checking = ui.checkingUpdate,
+                checkEnabled = !ui.checkingUpdate && !ui.updating,
+                onCheck = { vm.checkUpdate() },
+            )
+            VersionRow(
+                label = "App 版本",
+                value = ui.version,
+                dot = ui.appUpdateDot,
+                checking = ui.checkingAppUpdate,
+                checkEnabled = !ui.checkingAppUpdate,
+                onCheck = { vm.checkAppUpdate() },
             )
             ui.latestCodeTag?.let {
-                InfoRow("最新", it, valueColor = MaterialTheme.colorScheme.primary)
+                InfoRow("上游最新", it, valueColor = MaterialTheme.colorScheme.primary)
+            }
+            ui.appLatestVersion?.let {
+                InfoRow("App 最新", it, valueColor = MaterialTheme.colorScheme.primary)
             }
             Text(
-                "只检查上游源码版本；更新只下载几 MB 源码包，不重装镜像。",
+                "上游检查会同时对比配置键与任务，列出本 APK 构建后新增、尚不支持的功能；App 更新需到 Release 页手动安装。",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -224,27 +364,13 @@ fun HomeScreen(
                     color = MaterialTheme.colorScheme.error,
                 )
             }
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.md),
-            ) {
-                OutlinedButton(
-                    onClick = { vm.checkUpdate() },
-                    modifier = Modifier.weight(1f),
-                    enabled = !ui.checkingUpdate && !ui.updating,
-                ) {
-                    if (ui.checkingUpdate) {
-                        SmallSpinner()
-                        Spacer(Modifier.size(8.dp))
-                    }
-                    Text(if (ui.checkingUpdate) "检查中…" else "检查更新")
-                }
+            if (ui.latestCodeTag != null) {
                 Button(
                     onClick = { vm.applyUpdate() },
-                    modifier = Modifier.weight(1f),
-                    enabled = ui.latestCodeTag != null && !ui.updating && !ui.runningTask,
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !ui.updating && !ui.runningTask,
                 ) {
-                    Text(if (ui.updating) "更新中…" else "立即更新")
+                    Text(if (ui.updating) "更新中…" else "立即更新到 ${ui.latestCodeTag}")
                 }
             }
             if (ui.updating) {
@@ -361,10 +487,24 @@ fun HomeScreen(
             }
         }
 
-        // ---------------- 最近日志 ----------------
-        SectionHeader("最近输出")
+        // ---------------- 最近日志（点击进入全屏日志页） ----------------
         val logs by vm.logs.collectAsState()
-        MaaCard {
+        MaaCard(onClick = onOpenLogs) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    "最近输出",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.weight(1f),
+                )
+                Text(
+                    "查看全部 ›",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
             if (logs.isEmpty()) {
                 Text(
                     "暂无输出。部署或运行任务后这里会显示实时日志。",
@@ -386,4 +526,78 @@ fun HomeScreen(
 
         Spacer(Modifier.height(MaaDesignTokens.Spacing.xxl))
     }
+}
+
+@Composable
+private fun VersionRow(
+    label: String,
+    value: String,
+    valueColor: Color = Color.Unspecified,
+    dot: Boolean = false,
+    checking: Boolean,
+    checkEnabled: Boolean,
+    onCheck: () -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.sm),
+    ) {
+        Column(Modifier.weight(1f)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    label,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                if (dot) {
+                    Spacer(Modifier.size(6.dp))
+                    Box(
+                        Modifier
+                            .size(7.dp)
+                            .background(MaterialTheme.colorScheme.error, CircleShape)
+                    )
+                }
+            }
+            Text(value, style = MaterialTheme.typography.bodyMedium, color = valueColor)
+        }
+        OutlinedButton(
+            onClick = onCheck,
+            enabled = checkEnabled,
+            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+        ) {
+            if (checking) {
+                SmallSpinner()
+                Spacer(Modifier.size(6.dp))
+            }
+            Text(if (checking) "检查中…" else "检查")
+        }
+    }
+}
+
+private fun openUrl(context: Context, url: String?) {
+    if (url.isNullOrBlank()) return
+    runCatching {
+        context.startActivity(
+            Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        )
+    }
+}
+
+private fun copyGap(context: Context, report: UpstreamGapChecker.Report) {
+    val sb = StringBuilder("M7A 上游新增功能（相对构建基线 ${report.baselineTag ?: "?"}）\n")
+    if (report.newConfigKeys.isNotEmpty()) {
+        sb.append("配置键：\n")
+        report.newConfigKeys.forEach {
+            sb.append("- ${it.name}（${if (it.supported) "已支持" else "未支持"}）\n")
+        }
+    }
+    if (report.newTasks.isNotEmpty()) {
+        sb.append("任务：\n")
+        report.newTasks.forEach {
+            sb.append("- ${it.name}（${if (it.supported) "已支持" else "未支持"}）\n")
+        }
+    }
+    val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+    cm.setPrimaryClip(ClipData.newPlainText("M7A 上游新增功能", sb.toString()))
 }

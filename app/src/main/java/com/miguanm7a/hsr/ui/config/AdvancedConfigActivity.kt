@@ -165,7 +165,7 @@ private fun AdvancedConfigScreen(onBack: () -> Unit) {
                 ) + fadeIn(tween(MaaDesignTokens.Motion.fast))
                 val exit = slideOutHorizontally(
                     animationSpec = tween(
-                        durationMillis = MaaDesignTokens.Motion.fast + 40,
+                        durationMillis = MaaDesignTokens.Motion.page,
                         easing = MaaDesignTokens.Motion.EaseIn,
                     ),
                     targetOffsetX = { w -> if (forward) -w / 12 else w / 12 },

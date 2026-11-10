@@ -20,7 +20,7 @@ v2 把**源码外置**：
 |---|---|---|
 | M7A 源码 | 烤进容器 `/m7a` | APK 内置 zip，部署时解压到 `$HOME/m7a-shared/m7a-project` |
 | 运行方式 | `cd /m7a`（镜像内） | 该目录整体 bind 到容器 `/m7a` |
-| 检查更新 | 无 | 首页卡片，只比对上游 Release |
+| 检查更新 | 无 | 上游版本 + 新增功能差异；App 版本独立检查 |
 | 更新方式 | 重装镜像 | 只下几 MB 源码包，依赖变了才 `uv sync` |
 | 配置/日志/登录态 | 在镜像外，但更新要小心 | 一直在工程目录里，更新自动保留 |
 | CDP 实时监看 | 有 | 已移除（本机自用不需要） |
@@ -88,15 +88,25 @@ proot-distro login --bind=<project>:/m7a m7a -- \
 
 ## 检查更新
 
-首页「March7thAssistant 版本」卡片：
+首页「版本与更新」卡片有两行，对应两个独立的检查：
 
-- **检查更新**：只查 `moesnow/March7thAssistant` 的最新 Release，与本机 `version.json` 的 tag 比较。
+### 上游代码（M7A 本体）
+
+- **检查**：查 `moesnow/March7thAssistant` 的最新 Release，与本机 `version.json` 的 tag 比较。
+- **功能差异**：除了版本号，还会把「APK 构建时打进包的基线」与最新上游对比：
+  - 新增的配置键（`config.example.yaml` 顶层键）
+  - 新增的任务 ID（`utils/tasks.py` 的 `AVAILABLE_TASKS`）
+  - 每项标注「已支持 / 未支持」，并可一键复制清单。
+  - 基线由 CI 的 `scripts/make_baseline.py` 生成（`assets/meta/upstream-baseline.json`），只下载两个很小的文本文件，失败不影响版本检查。
 - **立即更新**：下载 GitHub 源码包（codeload，失败自动走 `ghfast.top` 镜像）→ 解压替换 → 对比 `uv.lock` 哈希。
   - 依赖没变：几秒钟完成。
   - 依赖变了：自动在容器内 `uv sync --only-group docker`，需要联网，可能几分钟；失败可点「重试依赖同步」。
 - 更新期间不能运行任务；旧源码保留在 `$HOME/m7a-shared/update/backup`，可用于回滚。
 
-App 自身不检查更新——想换 UI/打包逻辑，重新构建 APK 即可。
+### App 版本（本仓库）
+
+- **检查**：查本仓库 Release 的最新 `x.y.z`，弹窗显示新版本号与更新说明。
+- **更新**：HyperOS 不允许后台静默安装 APK，弹窗里的「打开下载页」跳 GitHub Release，手动下载安装。
 
 ---
 
@@ -160,9 +170,11 @@ python scripts/make_code_zip.py --download latest
 
 **检查更新失败**
 GitHub API 匿名限流（60 次/小时）或网络不通。稍后再试；更新源码包本身有 `ghfast.top` 回退。
+上游功能对比失败时只提示警告，不影响版本检查与更新。
 
 **日志在哪**
-App 内「日志」页实时查看；文件在 `$HOME/m7a-shared/m7a-project/logs/`。
+首页「最近输出」卡片显示最近 6 条，点卡片进入全屏日志页（级别过滤、清空、自动滚动）；
+文件在 `$HOME/m7a-shared/m7a-project/logs/`。
 
 ---
 

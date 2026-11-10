@@ -45,7 +45,7 @@ object MaaDesignTokens {
     object Motion {
         const val fast = 120
         const val base = 200
-        const val page = 240
+        const val page = 300
 
         val EaseOut: Easing = CubicBezierEasing(0.23f, 1f, 0.32f, 1f)
         val EaseIn: Easing = CubicBezierEasing(0.32f, 0f, 0.67f, 1f)

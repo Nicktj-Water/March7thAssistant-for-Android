@@ -1,14 +1,25 @@
 package com.miguanm7a.hsr.ui
 
 import android.content.Intent
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -36,6 +47,8 @@ fun MainScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val pagerState = rememberPagerState(pageCount = { NavTab.entries.size })
+    var showLogs by remember { mutableStateOf(false) }
+    BackHandler(enabled = showLogs) { showLogs = false }
 
     LaunchedEffect(Unit) { vm.refresh(context) }
 
@@ -47,10 +60,12 @@ fun MainScreen(
 
     Scaffold(
         bottomBar = {
-            BottomBar(
-                selected = NavTab.entries[pagerState.currentPage],
-                onSelect = { tab -> scope.launch { pagerState.animateScrollToPage(tab.ordinal) } },
-            )
+            if (!showLogs) {
+                BottomBar(
+                    selected = NavTab.entries[pagerState.currentPage],
+                    onSelect = { tab -> scope.launch { pagerState.animateScrollToPage(tab.ordinal) } },
+                )
+            }
         },
     ) { padding ->
         Box(Modifier.fillMaxSize().padding(padding)) {
@@ -62,6 +77,7 @@ fun MainScreen(
                             scope.launch { pagerState.animateScrollToPage(NavTab.DEPLOY.ordinal) }
                         },
                         onOpenTerminal = { openTerminal(null) },
+                        onOpenLogs = { showLogs = true },
                     )
 
                     NavTab.DEPLOY -> DeployScreen(vm = vm)
@@ -71,14 +87,30 @@ fun MainScreen(
                         onOpenTerminal = openTerminal,
                     )
 
-                    NavTab.LOG -> LogScreen(vm = vm)
-
                     NavTab.SETTINGS -> SettingsScreen(
                         vm = vm,
                         themeMode = themeMode,
                         accentTheme = accentTheme,
                         onThemeModeChange = onThemeModeChange,
                         onAccentChange = onAccentChange,
+                    )
+                }
+            }
+
+            AnimatedVisibility(
+                visible = showLogs,
+                enter = fadeIn(tween(200)),
+                exit = fadeOut(tween(160)),
+            ) {
+                Box(
+                    Modifier
+                        .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.background),
+                ) {
+                    LogScreen(
+                        vm = vm,
+                        onClose = { showLogs = false },
+                        modifier = Modifier.fillMaxSize(),
                     )
                 }
             }

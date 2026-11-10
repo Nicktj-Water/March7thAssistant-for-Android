@@ -90,6 +90,9 @@ jobs:
           python scripts/make_code_zip.py --download "${{ inputs.code_tag || 'latest' }}"
           ls -lh app/src/main/assets/code/
 
+      - name: 生成上游基线
+        run: python scripts/make_baseline.py --zip app/src/main/assets/code/m7a-code.zip
+
       - name: Gradle 构建
         run: |
           chmod +x gradlew

@@ -10,11 +10,15 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -38,7 +42,11 @@ import com.miguanm7a.hsr.ui.theme.label
 import com.miguanm7a.hsr.ui.theme.color
 
 @Composable
-fun LogScreen(vm: MainViewModel) {
+fun LogScreen(
+    vm: MainViewModel,
+    onClose: (() -> Unit)? = null,
+    modifier: Modifier = Modifier,
+) {
     val all by vm.logs.collectAsState()
 
     // 默认「信息」档：DEBUG 是每帧操作的刷屏内容，默认折叠，否则日志没法看
@@ -53,7 +61,7 @@ fun LogScreen(vm: MainViewModel) {
         if (logs.isNotEmpty()) listState.animateScrollToItem(logs.size - 1)
     }
 
-    Column(Modifier.fillMaxSize()) {
+    Column(modifier.fillMaxSize()) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -72,7 +80,19 @@ fun LogScreen(vm: MainViewModel) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            TextButton(onClick = { vm.clearLogs() }) { Text("清空") }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                TextButton(onClick = { vm.clearLogs() }) { Text("清空") }
+                if (onClose != null) {
+                    TextButton(onClick = onClose) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                        )
+                        Text("返回")
+                    }
+                }
+            }
         }
 
         // 级别过滤

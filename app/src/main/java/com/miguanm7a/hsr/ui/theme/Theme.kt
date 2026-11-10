@@ -162,7 +162,7 @@ private fun animatedColor(color: Color, label: String): Color =
     animateColorAsState(
         targetValue = color,
         animationSpec = tween(
-            durationMillis = MaaDesignTokens.Motion.base,
+            durationMillis = MaaDesignTokens.Motion.page,
             easing = MaaDesignTokens.Motion.EaseOut,
         ),
         label = label,

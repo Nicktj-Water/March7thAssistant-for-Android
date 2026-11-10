@@ -16,6 +16,7 @@ import com.miguanm7a.hsr.deploy.RootfsSource
 import com.miguanm7a.hsr.deploy.SharedPaths
 import com.miguanm7a.hsr.deploy.TaskToggles
 import com.miguanm7a.hsr.deploy.UpdateManager
+import com.miguanm7a.hsr.deploy.UpstreamGapChecker
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -46,6 +47,17 @@ data class UpdateCheckUi(
     val message: String? = null,
 )
 
+enum class AppUpdateOutcome { UP_TO_DATE, AVAILABLE, ERROR }
+
+/** 一次「检查 App 更新」的结果。 */
+data class AppUpdateCheckUi(
+    val outcome: AppUpdateOutcome,
+    val version: String = "",
+    val notes: String? = null,
+    val pageUrl: String? = null,
+    val message: String? = null,
+)
+
 data class UiState(
     val runtimeReady: Boolean = false,
     val rootfsReady: Boolean = false,
@@ -72,6 +84,14 @@ data class UiState(
     val releaseNotes: String? = null,
     val releasePage: String? = null,
     val updateCheck: UpdateCheckUi? = null,
+    val gapReport: UpstreamGapChecker.Report? = null,
+    // ---- App 自身更新 ----
+    val appLatestVersion: String? = null,
+    val checkingAppUpdate: Boolean = false,
+    val appUpdateCheck: AppUpdateCheckUi? = null,
+    // ---- 启动静默检查留下的红点 ----
+    val codeUpdateDot: Boolean = false,
+    val appUpdateDot: Boolean = false,
 )
 
 class MainViewModel(app: Application) : AndroidViewModel(app) {
@@ -180,6 +200,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             if (qrWatchJob?.isActive != true) startQrWatch()
             TaskKeepAliveService.start(context.applicationContext, snap.label.orEmpty())
         }
+
+        maybeSilentCheck(context)
     }
 
     // ------------------------------------------------------------------
@@ -460,6 +482,11 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             val current = CodeInstaller.installedTag(app)
             runCatching { UpdateManager.checkForUpdate(current) }
                 .onSuccess { result ->
+                    val resultTag = when (result) {
+                        is UpdateManager.CheckResult.Update -> result.release.tag
+                        is UpdateManager.CheckResult.UpToDate -> result.tag
+                    }
+                    val gap = runCatching { UpstreamGapChecker.check(app, resultTag) }.getOrNull()
                     when (result) {
                         is UpdateManager.CheckResult.Update -> {
                             pendingRelease = result.release
@@ -469,6 +496,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                                     latestCodeTag = result.release.tag,
                                     releaseNotes = result.release.notes,
                                     releasePage = result.release.pageUrl,
+                                    gapReport = gap,
+                                    codeUpdateDot = false,
                                     updateCheck = UpdateCheckUi(
                                         UpdateOutcome.AVAILABLE,
                                         result.release.tag,
@@ -489,6 +518,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                                     latestCodeTag = null,
                                     releaseNotes = null,
                                     releasePage = null,
+                                    gapReport = gap,
+                                    codeUpdateDot = false,
                                     updateCheck = UpdateCheckUi(UpdateOutcome.UP_TO_DATE, result.tag),
                                 )
                             }
@@ -515,6 +546,115 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     /** 关闭「检查更新」的结果对话框。 */
     fun dismissUpdateCheck() {
         _ui.update { it.copy(updateCheck = null) }
+    }
+
+    // ------------------------------------------------------------------
+    // App 自身更新（本仓库 Release）
+    // ------------------------------------------------------------------
+
+    private var pendingAppRelease: UpdateManager.AppRelease? = null
+
+    fun checkAppUpdate() {
+        val cur = _ui.value
+        if (cur.checkingAppUpdate) return
+        _ui.update { it.copy(checkingAppUpdate = true) }
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching { UpdateManager.checkAppUpdate(com.miguanm7a.hsr.BuildConfig.VERSION_NAME) }
+                .onSuccess { result ->
+                    when (result) {
+                        is UpdateManager.AppCheckResult.Update -> {
+                            pendingAppRelease = result.release
+                            _ui.update { s ->
+                                s.copy(
+                                    checkingAppUpdate = false,
+                                    appLatestVersion = result.release.version,
+                                    appUpdateDot = false,
+                                    appUpdateCheck = AppUpdateCheckUi(
+                                        AppUpdateOutcome.AVAILABLE,
+                                        result.release.version,
+                                        result.release.notes,
+                                        result.release.pageUrl,
+                                    ),
+                                )
+                            }
+                        }
+
+                        is UpdateManager.AppCheckResult.UpToDate -> {
+                            pendingAppRelease = null
+                            _ui.update { s ->
+                                s.copy(
+                                    checkingAppUpdate = false,
+                                    appLatestVersion = null,
+                                    appUpdateDot = false,
+                                    appUpdateCheck = AppUpdateCheckUi(
+                                        AppUpdateOutcome.UP_TO_DATE,
+                                        result.version,
+                                    ),
+                                )
+                            }
+                        }
+                    }
+                }
+                .onFailure {
+                    _ui.update { s ->
+                        s.copy(
+                            checkingAppUpdate = false,
+                            appUpdateCheck = AppUpdateCheckUi(
+                                AppUpdateOutcome.ERROR,
+                                message = it.message,
+                            ),
+                        )
+                    }
+                }
+        }
+    }
+
+    fun dismissAppUpdateCheck() {
+        _ui.update { it.copy(appUpdateCheck = null) }
+    }
+
+    /** 启动静默检查：6 小时内只查一次，只更新红点，不弹窗、不写日志。 */
+    private fun maybeSilentCheck(context: Context) {
+        val prefs = context.getSharedPreferences("m7a_update", Context.MODE_PRIVATE)
+        val last = prefs.getLong("last_check_ms", 0L)
+        if (System.currentTimeMillis() - last < 6 * 60 * 60 * 1000L) return
+        val cur = _ui.value
+        if (cur.checkingUpdate || cur.updating || cur.checkingAppUpdate) return
+        prefs.edit().putLong("last_check_ms", System.currentTimeMillis()).apply()
+
+        val app = getApplication<Application>()
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching { UpdateManager.checkForUpdate(CodeInstaller.installedTag(app)) }
+                .onSuccess { r ->
+                    when (r) {
+                        is UpdateManager.CheckResult.Update -> {
+                            pendingRelease = r.release
+                            _ui.update {
+                                it.copy(
+                                    latestCodeTag = r.release.tag,
+                                    releaseNotes = r.release.notes,
+                                    releasePage = r.release.pageUrl,
+                                    codeUpdateDot = true,
+                                )
+                            }
+                        }
+
+                        is UpdateManager.CheckResult.UpToDate -> _ui.update { it.copy(codeUpdateDot = false) }
+                    }
+                }
+            runCatching { UpdateManager.checkAppUpdate(com.miguanm7a.hsr.BuildConfig.VERSION_NAME) }
+                .onSuccess { r ->
+                    when (r) {
+                        is UpdateManager.AppCheckResult.Update -> _ui.update {
+                            it.copy(appLatestVersion = r.release.version, appUpdateDot = true)
+                        }
+
+                        is UpdateManager.AppCheckResult.UpToDate -> _ui.update {
+                            it.copy(appLatestVersion = null, appUpdateDot = false)
+                        }
+                    }
+                }
+        }
     }
 
     /** 下载并安装待更新的源码；依赖清单变化时会自动在容器内同步一次。 */

@@ -66,6 +66,46 @@ object UpdateManager {
         }
     }
 
+    // ------------------------------------------------------------------
+    // App 自身更新（本仓库的 Release）
+    // ------------------------------------------------------------------
+
+    private const val APP_REPO = "Nicktj-Water/March7thAssistant-for-Android"
+    private const val APP_API_LATEST = "https://api.github.com/repos/$APP_REPO/releases/latest"
+
+    data class AppRelease(
+        val version: String,
+        val name: String,
+        val notes: String,
+        val pageUrl: String,
+    )
+
+    sealed class AppCheckResult {
+        data class Update(val release: AppRelease) : AppCheckResult()
+        data class UpToDate(val version: String) : AppCheckResult()
+    }
+
+    /** 查本仓库最新 Release；版本号从 Release 标题里的 x.y.z 解析。 */
+    fun checkAppUpdate(currentVersion: String): AppCheckResult {
+        val obj = JSONObject(httpText(APP_API_LATEST))
+        val tag = obj.optString("tag_name")
+        val name = obj.optString("name").ifBlank { tag }
+        val version = Regex("""(\d+\.\d+\.\d+)""").find(name)?.groupValues?.get(1)
+            ?: Regex("""(\d+\.\d+\.\d+)""").find(tag)?.groupValues?.get(1)
+            ?: error("Release 中找不到版本号")
+        val release = AppRelease(
+            version = version,
+            name = name,
+            notes = obj.optString("body").take(4000),
+            pageUrl = obj.optString("html_url"),
+        )
+        return if (compareVersions(version, currentVersion) <= 0) {
+            AppCheckResult.UpToDate(currentVersion)
+        } else {
+            AppCheckResult.Update(release)
+        }
+    }
+
     /**
      * 下载并安装指定版本源码。
      *
