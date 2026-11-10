@@ -61,7 +61,7 @@ import com.miguanm7a.hsr.deploy.ConfigSync
 import com.miguanm7a.hsr.deploy.DeployScripts
 import com.miguanm7a.hsr.deploy.DeploySettings
 import com.miguanm7a.hsr.deploy.SharedPaths
-import com.miguanm7a.hsr.deploy.TermuxPaths
+import com.miguanm7a.hsr.termux.TermuxPaths
 import com.miguanm7a.hsr.ui.components.MaaCard
 import com.miguanm7a.hsr.ui.components.SectionHeader
 import com.miguanm7a.hsr.ui.theme.AccentTheme
