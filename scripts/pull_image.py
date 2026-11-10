@@ -92,14 +92,23 @@ class Registry:
 
     def _open(self, url: str, accept=None, timeout=60):
         request = urllib.request.Request(url, headers=self._headers(accept))
-        try:
-            return urllib.request.urlopen(request, timeout=timeout)
-        except urllib.error.HTTPError as e:
-            if e.code != 401:
-                raise
-            self._login(e.headers.get("WWW-Authenticate", ""))
-            request = urllib.request.Request(url, headers=self._headers(accept))
-            return urllib.request.urlopen(request, timeout=timeout)
+        last = None
+        for attempt in range(4):
+            try:
+                return urllib.request.urlopen(request, timeout=timeout)
+            except urllib.error.HTTPError as e:
+                if e.code != 401:
+                    raise
+                self._login(e.headers.get("WWW-Authenticate", ""))
+                request = urllib.request.Request(url, headers=self._headers(accept))
+                continue
+            except (urllib.error.URLError, TimeoutError, OSError) as e:
+                # 镜像站偶发超时/断连，重试几次再失败
+                last = e
+                if attempt < 3:
+                    log(f"  网络异常（{e}），{attempt + 1}/3 后重试")
+                    time.sleep(3 * (attempt + 1))
+        raise last
 
     def _login(self, challenge: str):
         params = _parse_challenge(challenge)
