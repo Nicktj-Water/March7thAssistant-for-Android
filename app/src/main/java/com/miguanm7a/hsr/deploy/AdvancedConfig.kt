@@ -43,22 +43,21 @@ object AdvancedConfig {
     )
     private const val INSTANCE_LABEL = "拟造花萼（金）/（赤）、凝滞虚影、侵蚀隧洞、饰品提取"
 
-    val FIELDS: List<AdvancedField> by lazy {
-        listOf(
+    val FIELDS: List<AdvancedField> = listOf(
         // ── 副本与体力 ────────────────────────────────────────────────
         AdvancedField(
-            "power_plan_keep", "保留体力计划", AdvancedGroup.POWER, AdvancedType.BOOL,
+            "power_plan_keep", "保留体力计划", AdvancedGroup.INSTANCE, AdvancedType.BOOL,
             default = "false",
             desc = "执行后保留整份体力计划；关闭时按剩余次数更新并删除已完成的计划。",
         ),
         AdvancedField(
-            "instance_type", "副本类型", AdvancedGroup.POWER, AdvancedType.ENUM,
+            "instance_type", "副本类型", AdvancedGroup.INSTANCE, AdvancedType.ENUM,
             default = "拟造花萼（金）",
             options = INSTANCE_OPTIONS.map { it to it },
             desc = INSTANCE_LABEL,
         ),
         AdvancedField(
-            "calyx_golden_preference", "金花萼偏好地区", AdvancedGroup.POWER, AdvancedType.ENUM,
+            "calyx_golden_preference", "金花萼偏好地区", AdvancedGroup.INSTANCE, AdvancedType.ENUM,
             default = "Jarilo-VI",
             options = listOf(
                 "Jarilo-VI" to "雅利洛-VI",
@@ -67,117 +66,117 @@ object AdvancedConfig {
             ),
         ),
         AdvancedField(
-            "instance_names", "副本名称", AdvancedGroup.POWER, AdvancedType.MAP,
+            "instance_names", "副本名称", AdvancedGroup.INSTANCE, AdvancedType.MAP,
             default = INSTANCE_NAMES,
             desc = "每行「副本类型=名称」，必须是游戏内准确名称。",
             placeholder = "拟造花萼（金）=回忆之蕾",
         ),
         AdvancedField(
-            "instance_names_challenge_count", "连续挑战次数", AdvancedGroup.POWER, AdvancedType.MAP,
+            "instance_names_challenge_count", "连续挑战次数", AdvancedGroup.INSTANCE, AdvancedType.MAP,
             default = INSTANCE_COUNTS,
             desc = "每行「副本类型=次数」，超过剩余体力时按实际次数执行。",
             placeholder = "拟造花萼（金）=24",
         ),
         AdvancedField(
-            "tp_before_instance", "进本前先传送", AdvancedGroup.POWER, AdvancedType.BOOL,
+            "tp_before_instance", "进本前先传送", AdvancedGroup.INSTANCE, AdvancedType.BOOL,
             default = "false", desc = "进入副本前先传送到任意锚点，降低卡图概率。",
         ),
         AdvancedField(
-            "build_target_enable", "启用培养目标", AdvancedGroup.POWER, AdvancedType.BOOL,
+            "build_target_enable", "启用培养目标", AdvancedGroup.INSTANCE, AdvancedType.BOOL,
             default = "false", desc = "按游戏内「培养目标」自动刷所需副本。",
         ),
         AdvancedField(
-            "build_target_scheme", "培养目标识别方式", AdvancedGroup.POWER, AdvancedType.ENUM,
+            "build_target_scheme", "培养目标识别方式", AdvancedGroup.INSTANCE, AdvancedType.ENUM,
             default = "instance",
             options = listOf("instance" to "按副本名称", "drop" to "按掉落素材"),
         ),
         AdvancedField(
-            "build_target_ornament_weekly_count", "每周饰品提取次数", AdvancedGroup.POWER, AdvancedType.INT,
+            "build_target_ornament_weekly_count", "每周饰品提取次数", AdvancedGroup.INSTANCE, AdvancedType.INT,
             default = "1", desc = "培养目标每周执行饰品提取的次数，0–7。",
         ),
         AdvancedField(
             "build_target_use_user_instance_when_only_erosion_and_ornament",
-            "仅识别到侵蚀/饰品时用自定义副本", AdvancedGroup.POWER, AdvancedType.BOOL,
+            "仅识别到侵蚀/饰品时用自定义副本", AdvancedGroup.INSTANCE, AdvancedType.BOOL,
             default = "false",
         ),
         AdvancedField(
-            "break_down_level_four_relicset", "每周分解四星遗器", AdvancedGroup.POWER, AdvancedType.BOOL,
+            "break_down_level_four_relicset", "每周分解四星遗器", AdvancedGroup.INSTANCE, AdvancedType.BOOL,
             default = "false", desc = "每周在设定日期清理四星及以下遗器。",
         ),
         AdvancedField(
-            "weekly_relic_smart_discard_enable", "每周智能弃置五星", AdvancedGroup.POWER, AdvancedType.BOOL,
+            "weekly_relic_smart_discard_enable", "每周智能弃置五星", AdvancedGroup.INSTANCE, AdvancedType.BOOL,
             default = "false", desc = "先智能弃置五星遗器，再分解已弃置遗器。",
         ),
         AdvancedField(
-            "weekly_relic_cleanup_day_of_week", "遗器清理日", AdvancedGroup.POWER, AdvancedType.INT,
+            "weekly_relic_cleanup_day_of_week", "遗器清理日", AdvancedGroup.INSTANCE, AdvancedType.INT,
             default = "1", desc = "1=周一 … 7=周日，在游戏刷新时间后执行。",
         ),
         AdvancedField(
-            "merge_immersifier_limit", "沉浸器上限", AdvancedGroup.POWER, AdvancedType.INT,
+            "merge_immersifier_limit", "沉浸器上限", AdvancedGroup.INSTANCE, AdvancedType.INT,
             default = "12", desc = "优先合成沉浸器时使用的上限。",
         ),
         AdvancedField(
-            "echo_of_war_start_day_of_week", "历战余响起始日", AdvancedGroup.POWER, AdvancedType.INT,
+            "echo_of_war_start_day_of_week", "历战余响起始日", AdvancedGroup.INSTANCE, AdvancedType.INT,
             default = "1", desc = "1=周一 … 7=周日；此日之前不执行历战余响。",
         ),
         AdvancedField(
-            "borrow_character_enable", "强制使用支援角色", AdvancedGroup.POWER, AdvancedType.BOOL,
+            "borrow_character_enable", "强制使用支援角色", AdvancedGroup.INSTANCE, AdvancedType.BOOL,
             default = "false", desc = "开启后必须选到支援角色才开战。",
         ),
         AdvancedField(
-            "borrow_scroll_times", "支援列表滚动次数", AdvancedGroup.POWER, AdvancedType.INT,
+            "borrow_scroll_times", "支援列表滚动次数", AdvancedGroup.INSTANCE, AdvancedType.INT,
             default = "10", desc = "支援列表最多滚动查找多少次。",
         ),
 
         // ── 模拟宇宙 / 差分宇宙 / 货币战争 ───────────────────────────
         AdvancedField(
-            "universe_enable", "启用模拟宇宙", AdvancedGroup.DIVERGENT, AdvancedType.BOOL,
+            "universe_enable", "启用模拟宇宙", AdvancedGroup.UNIVERSE, AdvancedType.BOOL,
             default = "false",
         ),
         AdvancedField(
-            "universe_operation_mode", "运行方式", AdvancedGroup.DIVERGENT, AdvancedType.ENUM,
+            "universe_operation_mode", "运行方式", AdvancedGroup.UNIVERSE, AdvancedType.ENUM,
             default = "exe",
             options = listOf("exe" to "集成", "source" to "源码"),
             desc = "集成模式使用 3rdparty 内的 Auto_Simulated_Universe。",
         ),
         AdvancedField(
-            "universe_category", "宇宙类型", AdvancedGroup.DIVERGENT, AdvancedType.ENUM,
+            "universe_category", "宇宙类型", AdvancedGroup.UNIVERSE, AdvancedType.ENUM,
             default = "divergent",
             options = listOf("divergent" to "差分宇宙", "universe" to "模拟宇宙"),
         ),
         AdvancedField(
-            "universe_enable_gpu", "启用 GPU 加速", AdvancedGroup.DIVERGENT, AdvancedType.BOOL,
+            "universe_enable_gpu", "启用 GPU 加速", AdvancedGroup.UNIVERSE, AdvancedType.BOOL,
             default = "false", desc = "不稳定时请关闭（云游戏模式通常不需要）。",
         ),
         AdvancedField(
-            "universe_bonus_enable", "自动领取沉浸奖励", AdvancedGroup.DIVERGENT, AdvancedType.BOOL,
+            "universe_bonus_enable", "自动领取沉浸奖励", AdvancedGroup.UNIVERSE, AdvancedType.BOOL,
             default = "false",
         ),
         AdvancedField(
-            "universe_frequency", "运行频率", AdvancedGroup.DIVERGENT, AdvancedType.ENUM,
+            "universe_frequency", "运行频率", AdvancedGroup.UNIVERSE, AdvancedType.ENUM,
             default = "weekly",
             options = listOf("weekly" to "每周", "daily" to "每天"),
         ),
         AdvancedField(
-            "universe_count", "每次尝试次数", AdvancedGroup.DIVERGENT, AdvancedType.INT,
+            "universe_count", "每次尝试次数", AdvancedGroup.UNIVERSE, AdvancedType.INT,
             default = "34",
         ),
         AdvancedField(
-            "universe_timeout", "超时时间（小时）", AdvancedGroup.DIVERGENT, AdvancedType.INT,
+            "universe_timeout", "超时时间（小时）", AdvancedGroup.UNIVERSE, AdvancedType.INT,
             default = "20",
         ),
         AdvancedField(
-            "divergent_type", "差分宇宙模式", AdvancedGroup.DIVERGENT, AdvancedType.ENUM,
+            "divergent_type", "差分宇宙模式", AdvancedGroup.UNIVERSE, AdvancedType.ENUM,
             default = "normal",
             options = listOf("normal" to "常规演算", "cycle" to "周期演算"),
         ),
         AdvancedField(
-            "divergent_team_type", "差分队伍类型", AdvancedGroup.DIVERGENT, AdvancedType.ENUM,
+            "divergent_team_type", "差分队伍类型", AdvancedGroup.UNIVERSE, AdvancedType.ENUM,
             default = "终结技",
             options = listOf("追击", "dot", "终结技", "击破", "盾反").map { it to it },
         ),
         AdvancedField(
-            "universe_fate", "模拟宇宙命途", AdvancedGroup.DIVERGENT, AdvancedType.ENUM,
+            "universe_fate", "模拟宇宙命途", AdvancedGroup.UNIVERSE, AdvancedType.ENUM,
             default = "不配置",
             options = listOf(
                 "不配置", "存护", "记忆", "虚无", "丰饶", "巡猎",
@@ -185,60 +184,60 @@ object AdvancedConfig {
             ).map { it to it },
         ),
         AdvancedField(
-            "universe_difficulty", "模拟宇宙难度", AdvancedGroup.DIVERGENT, AdvancedType.INT,
+            "universe_difficulty", "模拟宇宙难度", AdvancedGroup.UNIVERSE, AdvancedType.INT,
             default = "0",
         ),
         AdvancedField(
-            "weekly_divergent_enable", "启用差分积分奖励", AdvancedGroup.DIVERGENT, AdvancedType.BOOL,
+            "weekly_divergent_enable", "启用差分积分奖励", AdvancedGroup.UNIVERSE, AdvancedType.BOOL,
             default = "false",
         ),
         AdvancedField(
-            "weekly_divergent_type", "积分奖励模式", AdvancedGroup.DIVERGENT, AdvancedType.ENUM,
+            "weekly_divergent_type", "积分奖励模式", AdvancedGroup.UNIVERSE, AdvancedType.ENUM,
             default = "cycle",
             options = listOf("normal" to "常规演算", "cycle" to "周期演算"),
         ),
         AdvancedField(
-            "weekly_divergent_level", "积分奖励难度", AdvancedGroup.DIVERGENT, AdvancedType.INT,
+            "weekly_divergent_level", "积分奖励难度", AdvancedGroup.UNIVERSE, AdvancedType.INT,
             default = "5", desc = "1–6，6 对应常规演算星阶模式。",
         ),
         AdvancedField(
-            "weekly_divergent_bonus_enable", "积分后领饰品", AdvancedGroup.DIVERGENT, AdvancedType.BOOL,
+            "weekly_divergent_bonus_enable", "积分后领饰品", AdvancedGroup.UNIVERSE, AdvancedType.BOOL,
             default = "false",
         ),
         AdvancedField(
-            "weekly_divergent_stable_mode", "低性能兼容模式", AdvancedGroup.DIVERGENT, AdvancedType.BOOL,
+            "weekly_divergent_stable_mode", "低性能兼容模式", AdvancedGroup.UNIVERSE, AdvancedType.BOOL,
             default = "false", desc = "提高事件/随意门交互成功率；云游戏强制使用。",
         ),
         AdvancedField(
-            "divergent_auto_save_enable", "探索后自动存档", AdvancedGroup.DIVERGENT, AdvancedType.BOOL,
+            "divergent_auto_save_enable", "探索后自动存档", AdvancedGroup.UNIVERSE, AdvancedType.BOOL,
             default = "true", desc = "保存到第一个空存档位；没有空位时跳过。",
         ),
         AdvancedField(
-            "divergent_station_priority_enable", "自定义站点优先级", AdvancedGroup.DIVERGENT, AdvancedType.BOOL,
+            "divergent_station_priority_enable", "自定义站点优先级", AdvancedGroup.UNIVERSE, AdvancedType.BOOL,
             default = "false", desc = "关闭时使用默认优先级。",
         ),
         AdvancedField(
-            "divergent_station_priority", "站点优先级", AdvancedGroup.DIVERGENT, AdvancedType.MAP,
+            "divergent_station_priority", "站点优先级", AdvancedGroup.UNIVERSE, AdvancedType.MAP,
             default = STATION_PRIORITY,
             desc = "每行「站点=优先级」，数字越小越优先。",
             placeholder = "战斗=1",
         ),
         AdvancedField(
-            "divergent_station_disabled", "禁用站点", AdvancedGroup.DIVERGENT, AdvancedType.LINES,
+            "divergent_station_disabled", "禁用站点", AdvancedGroup.UNIVERSE, AdvancedType.LINES,
             default = "", desc = "每行一个站点名；有重抽次数时会尝试避开。",
             placeholder = "商店\n财富",
         ),
         AdvancedField(
-            "currencywars_enable", "启用货币战争", AdvancedGroup.CURRENCY_WARS, AdvancedType.BOOL,
+            "currencywars_enable", "启用货币战争", AdvancedGroup.UNIVERSE, AdvancedType.BOOL,
             default = "false",
         ),
         AdvancedField(
-            "currencywars_type", "货币战争模式", AdvancedGroup.CURRENCY_WARS, AdvancedType.ENUM,
+            "currencywars_type", "货币战争模式", AdvancedGroup.UNIVERSE, AdvancedType.ENUM,
             default = "overclock",
             options = listOf("normal" to "标准博弈", "overclock" to "超频博弈"),
         ),
         AdvancedField(
-            "currencywars_rank_difficulty", "职级难度", AdvancedGroup.CURRENCY_WARS, AdvancedType.ENUM,
+            "currencywars_rank_difficulty", "职级难度", AdvancedGroup.UNIVERSE, AdvancedType.ENUM,
             default = "lowest",
             options = listOf(
                 "current" to "当前职级",
@@ -247,26 +246,26 @@ object AdvancedConfig {
             ),
         ),
         AdvancedField(
-            "currencywars_bonus_enable", "积分后快速提取饰品", AdvancedGroup.CURRENCY_WARS, AdvancedType.BOOL,
+            "currencywars_bonus_enable", "积分后快速提取饰品", AdvancedGroup.UNIVERSE, AdvancedType.BOOL,
             default = "false",
         ),
         AdvancedField(
-            "currencywars_fast_mode", "速通模式", AdvancedGroup.CURRENCY_WARS, AdvancedType.BOOL,
+            "currencywars_fast_mode", "速通模式", AdvancedGroup.UNIVERSE, AdvancedType.BOOL,
             default = "true", desc = "仅在首领节点尝试装备武器。",
         ),
         AdvancedField(
-            "currencywars_strategy", "货币战争策略", AdvancedGroup.CURRENCY_WARS, AdvancedType.ENUM,
+            "currencywars_strategy", "货币战争策略", AdvancedGroup.UNIVERSE, AdvancedType.ENUM,
             default = "default",
             options = listOf("default" to "默认", "aglaea" to "阿格莱雅"),
         ),
         AdvancedField(
             "currencywars_remembrance_trailblazer_name",
-            "「开拓者·记忆」显示名", AdvancedGroup.CURRENCY_WARS, AdvancedType.TEXT,
+            "「开拓者·记忆」显示名", AdvancedGroup.UNIVERSE, AdvancedType.TEXT,
             default = "", desc = "阿格莱雅策略下使用；留空则跳过该角色。",
         ),
         AdvancedField(
             "currencywars_strategy_restart_on_special_tags",
-            "特殊词条允许重开", AdvancedGroup.CURRENCY_WARS, AdvancedType.BOOL,
+            "特殊词条允许重开", AdvancedGroup.UNIVERSE, AdvancedType.BOOL,
             default = "true",
         ),
 
@@ -300,51 +299,51 @@ object AdvancedConfig {
         AdvancedField("apocalyptic_team3", "末日幻影 3 队（星启）", AdvancedGroup.ENDGAME, AdvancedType.TEAM, default = TEAM_C, desc = "星启模式第三队，不能留空。"),
 
         // ── 资产与兑换码 ────────────────────────────────────────────
-        AdvancedField("asset_manager_enable", "启用资产管理", AdvancedGroup.DAILY, AdvancedType.BOOL, default = "false"),
-        AdvancedField("asset_self_molding_resin_enable", "每月合成自塑尘脂", AdvancedGroup.DAILY, AdvancedType.BOOL, default = "false"),
-        AdvancedField("asset_ember_special_pass_enable", "余烬换星轨专票", AdvancedGroup.DAILY, AdvancedType.BOOL, default = "false"),
-        AdvancedField("asset_ember_regular_pass_enable", "余烬换星轨通票", AdvancedGroup.DAILY, AdvancedType.BOOL, default = "false"),
-        AdvancedField("asset_ember_tracks_of_destiny_enable", "余烬换命运足迹", AdvancedGroup.DAILY, AdvancedType.BOOL, default = "false"),
-        AdvancedField("asset_lc3_star_superimpose_enable", "三星光锥自动叠加", AdvancedGroup.DAILY, AdvancedType.BOOL, default = "false"),
+        AdvancedField("asset_manager_enable", "启用资产管理", AdvancedGroup.ASSET, AdvancedType.BOOL, default = "false"),
+        AdvancedField("asset_self_molding_resin_enable", "每月合成自塑尘脂", AdvancedGroup.ASSET, AdvancedType.BOOL, default = "false"),
+        AdvancedField("asset_ember_special_pass_enable", "余烬换星轨专票", AdvancedGroup.ASSET, AdvancedType.BOOL, default = "false"),
+        AdvancedField("asset_ember_regular_pass_enable", "余烬换星轨通票", AdvancedGroup.ASSET, AdvancedType.BOOL, default = "false"),
+        AdvancedField("asset_ember_tracks_of_destiny_enable", "余烬换命运足迹", AdvancedGroup.ASSET, AdvancedType.BOOL, default = "false"),
+        AdvancedField("asset_lc3_star_superimpose_enable", "三星光锥自动叠加", AdvancedGroup.ASSET, AdvancedType.BOOL, default = "false"),
         AdvancedField(
-            "redemption_code", "兑换码", AdvancedGroup.DAILY, AdvancedType.LINES,
+            "redemption_code", "兑换码", AdvancedGroup.ASSET, AdvancedType.LINES,
             default = "", desc = "每行一个兑换码；执行时会自动领取。",
             placeholder = "ABCD1234\nEFGH5678",
         ),
 
         // ── 活动 ────────────────────────────────────────────────────
-        AdvancedField("activity_gardenofplenty_enable", "花藏繁生活动", AdvancedGroup.DAILY, AdvancedType.BOOL, default = "false"),
+        AdvancedField("activity_gardenofplenty_enable", "花藏繁生活动", AdvancedGroup.ACTIVITY, AdvancedType.BOOL, default = "false"),
         AdvancedField(
-            "activity_gardenofplenty_instance_type", "花藏繁生副本类型", AdvancedGroup.DAILY, AdvancedType.ENUM,
+            "activity_gardenofplenty_instance_type", "花藏繁生副本类型", AdvancedGroup.ACTIVITY, AdvancedType.ENUM,
             default = "拟造花萼（金）", options = INSTANCE_OPTIONS.map { it to it },
         ),
-        AdvancedField("activity_realmofthestrange_enable", "异器盈界活动", AdvancedGroup.DAILY, AdvancedType.BOOL, default = "false"),
-        AdvancedField("activity_planarfissure_enable", "位面分裂活动", AdvancedGroup.DAILY, AdvancedType.BOOL, default = "false"),
-        AdvancedField("activity_journey_highlights_notification_enable", "活动热点通知", AdvancedGroup.DAILY, AdvancedType.BOOL, default = "false"),
+        AdvancedField("activity_realmofthestrange_enable", "异器盈界活动", AdvancedGroup.ACTIVITY, AdvancedType.BOOL, default = "false"),
+        AdvancedField("activity_planarfissure_enable", "位面分裂活动", AdvancedGroup.ACTIVITY, AdvancedType.BOOL, default = "false"),
+        AdvancedField("activity_journey_highlights_notification_enable", "活动热点通知", AdvancedGroup.ACTIVITY, AdvancedType.BOOL, default = "false"),
         AdvancedField(
-            "daily_memory_one_team", "回忆一队伍", AdvancedGroup.DAILY, AdvancedType.TEAM,
+            "daily_memory_one_team", "回忆一队伍", AdvancedGroup.ACTIVITY, AdvancedType.TEAM,
             default = "DanHeng, -1\nNatasha, 0\nMarch7th, 0\nAsta, 0",
             desc = "启用「回忆一」时使用；每行「角色名, 位置」。",
         ),
 
         // ── 复合结构（原始 YAML） ─────────────────────────────────────
         AdvancedField(
-            "power_plan", "体力计划", AdvancedGroup.POWER, AdvancedType.RAW,
+            "power_plan", "体力计划", AdvancedGroup.INSTANCE, AdvancedType.RAW,
             desc = "按顺序执行的清体力计划，每行一项：[副本类型, 副本名称, 剩余次数]。留空表示使用上面的默认副本。",
             placeholder = "[]",
         ),
         AdvancedField(
-            "instance_teams", "副本指定队伍", AdvancedGroup.POWER, AdvancedType.RAW,
+            "instance_teams", "副本指定队伍", AdvancedGroup.INSTANCE, AdvancedType.RAW,
             desc = "为特定副本指定队伍编号；每行一个映射：instance_name 与 team_number。",
             placeholder = "- instance_name: \"拟造花萼（金）\"\n  team_number: 1",
         ),
         AdvancedField(
-            "borrow_friends", "支援角色好友", AdvancedGroup.POWER, AdvancedType.RAW,
+            "borrow_friends", "支援角色好友", AdvancedGroup.INSTANCE, AdvancedType.RAW,
             desc = "借用支援角色的好友列表，每行一项：[角色名, 好友备注]；没有时用 \"None\"。",
             placeholder = "- [\"March7th\", \"赵相机\"]",
         ),
         AdvancedField(
-            "daily_tasks", "每日实训任务状态", AdvancedGroup.DAILY, AdvancedType.RAW,
+            "daily_tasks", "每日实训任务状态", AdvancedGroup.ACTIVITY, AdvancedType.RAW,
             desc = "上游记录的每日实训任务完成状态（映射）。一般由程序自动维护，手动清空为 [] 可强制重跑。",
             placeholder = "[]",
         ),
@@ -377,86 +376,6 @@ object AdvancedConfig {
             "already_used_codes", "已使用兑换码", AdvancedGroup.MISC, AdvancedType.LINES,
             desc = "记录已兑换过的码，避免重复尝试；清空后下次运行会重新尝试。",
         ),
-        ) + togglesAsFields() + NOTIFY_FIELDS + READONLY_FIELDS
-    }
-
-    private fun togglesAsFields(): List<AdvancedField> = TaskToggles.ALL.map { t ->
-        AdvancedField(
-            key = t.key,
-            title = t.label,
-            group = when (t.group) {
-                ToggleGroup.POWER -> AdvancedGroup.POWER
-                ToggleGroup.REWARD, ToggleGroup.DAILY, ToggleGroup.ACTIVITY -> AdvancedGroup.DAILY
-                ToggleGroup.AUTOPLOT, ToggleGroup.RUNTIME -> AdvancedGroup.MISC
-            },
-            type = AdvancedType.BOOL,
-            default = t.defaultValue.toString(),
-            desc = t.description,
-        )
-    }
-
-    private fun nb(key: String, title: String, default: Boolean = false, desc: String = "") =
-        AdvancedField(key, title, AdvancedGroup.NOTIFY, AdvancedType.BOOL, default.toString(), desc)
-
-    private fun nt(key: String, title: String, desc: String = "") =
-        AdvancedField(key, title, AdvancedGroup.NOTIFY, AdvancedType.TEXT, "", desc)
-
-    private val NOTIFY_FIELDS: List<AdvancedField> = listOf(
-        AdvancedField(
-            "notify_level", "通知级别", AdvancedGroup.NOTIFY, AdvancedType.ENUM, "all",
-            "all 推送所有通知；error 仅推送错误与异常。",
-            options = listOf("all" to "全部通知", "error" to "仅错误"),
-        ),
-        nb("notify_merge", "合并通知", false, "完整运行结束时把所有通知合并成一条。"),
-        nb("notify_send_images", "发送图片", true, "推送时附带截图。"),
-        nb("notify_serverchanturbo_enable", "Server酱·Turbo"),
-        nt("notify_serverchanturbo_sctkey", "Server酱·Turbo SendKey"),
-        nb("notify_serverchan3_enable", "Server酱·3"),
-        nt("notify_serverchan3_sendkey", "Server酱·3 SendKey"),
-        nb("notify_bark_enable", "Bark"),
-        nt("notify_bark_key", "Bark Key"),
-        nt("notify_bark_group", "Bark 分组"),
-        nb("notify_telegram_enable", "Telegram"),
-        nt("notify_telegram_token", "Telegram Bot Token"),
-        nt("notify_telegram_userid", "Telegram 用户/群组 ID"),
-        nb("notify_wechatworkbot_enable", "企业微信机器人"),
-        nt("notify_wechatworkbot_key", "企业微信机器人 Key"),
-        nb("notify_wechatworkapp_enable", "企业微信应用"),
-        nt("notify_wechatworkapp_corpid", "企业微信 CorpID"),
-        nt("notify_wechatworkapp_corpsecret", "企业微信 CorpSecret"),
-        nt("notify_wechatworkapp_agentid", "企业微信 AgentID"),
-        nb("notify_dingtalk_enable", "钉钉机器人"),
-        nt("notify_dingtalk_token", "钉钉 Access Token"),
-        nt("notify_dingtalk_secret", "钉钉加签密钥（可选）"),
-        nb("notify_lark_enable", "飞书机器人"),
-        nt("notify_lark_webhook", "飞书 Webhook"),
-        nb("notify_discord_enable", "Discord"),
-        nt("notify_discord_webhook", "Discord Webhook"),
-        nb("notify_pushplus_enable", "PushPlus"),
-        nt("notify_pushplus_token", "PushPlus Token"),
-        nb("notify_gotify_enable", "Gotify"),
-        nt("notify_gotify_url", "Gotify 服务器 URL"),
-        nt("notify_gotify_token", "Gotify Token"),
-        nb("notify_smtp_enable", "SMTP 邮件"),
-        nt("notify_smtp_host", "SMTP 服务器"),
-        nt("notify_smtp_user", "SMTP 用户名"),
-        nt("notify_smtp_password", "SMTP 密码/授权码"),
-        nt("notify_smtp_To", "收件人邮箱"),
-    )
-
-    private fun ro(key: String, title: String) =
-        AdvancedField(key, title, AdvancedGroup.MISC, AdvancedType.READONLY, "0", "只读，由 M7A 写入。")
-
-    private val READONLY_FIELDS: List<AdvancedField> = listOf(
-        ro("last_run_timestamp", "上次完整运行"),
-        ro("weekly_relic_cleanup_timestamp", "上次遗器清理"),
-        ro("echo_of_war_timestamp", "上次历战余响"),
-        ro("currencywars_timestamp", "上次货币战争"),
-        ro("weekly_divergent_timestamp", "上次差分积分"),
-        ro("universe_timestamp", "上次模拟宇宙"),
-        ro("forgottenhall_timestamp", "上次混沌回忆"),
-        ro("purefiction_timestamp", "上次虚构叙事"),
-        ro("apocalyptic_timestamp", "上次末日幻影"),
     )
 
     fun fieldsOf(group: AdvancedGroup): List<AdvancedField> = FIELDS.filter { it.group == group }
@@ -501,7 +420,6 @@ object AdvancedConfig {
             AdvancedType.LEVELS -> parseLevels(blockOf(lines, field.key)) ?: field.default
             AdvancedType.LINES -> parseLines(blockOf(lines, field.key)) ?: field.default
             AdvancedType.RAW -> rawBlockOf(lines, field.key) ?: field.default.ifBlank { "[]" }
-            AdvancedType.READONLY -> inline ?: field.default
         }
     }
 
@@ -606,7 +524,6 @@ object AdvancedConfig {
                     }
                 buildBlock(field.key, items.map { "  $it" })
             }
-            AdvancedType.READONLY -> ""
             AdvancedType.RAW -> {
                 val body = display.trim()
                 if (body.isEmpty() || body == "[]") {
@@ -685,16 +602,15 @@ object AdvancedConfig {
 }
 
 enum class AdvancedGroup(val title: String, val subtitle: String) {
-    POWER("体力", "清体力、副本、支援、遗器清理、历战余响"),
-    DAILY("日常", "每日实训、活动、奖励领取、资产与兑换码"),
-    CURRENCY_WARS("货币战争", "积分奖励、模式与职级"),
-    DIVERGENT("差分宇宙", "模拟宇宙 / 差分、命途、站点优先级"),
-    ENDGAME("逐光捡金", "混沌回忆、虚构叙事、末日幻影"),
-    NOTIFY("消息推送", "渠道、通知级别、合并与图片"),
-    MISC("杂项", "任务行为、通知模板、调度、镜像与调试"),
+    INSTANCE("副本与体力", "刷本类型、次数、培养目标、遗器清理、支援"),
+    UNIVERSE("模拟宇宙 / 差分 / 货币战争", "运行方式、命途、站点优先级、积分奖励"),
+    ENDGAME("忘却 / 虚构 / 末日", "三模式开关、关卡范围与队伍"),
+    ASSET("资产与兑换码", "每月兑换、光锥叠加、兑换码"),
+    ACTIVITY("活动", "花藏繁生、异器盈界、位面分裂、每日实训"),
+    MISC("其他与原始 YAML", "定时任务、通知模板、镜像与调试参数"),
 }
 
-enum class AdvancedType { BOOL, INT, ENUM, TEXT, MAP, TEAM, LEVELS, LINES, RAW, READONLY }
+enum class AdvancedType { BOOL, INT, ENUM, TEXT, MAP, TEAM, LEVELS, LINES, RAW }
 
 data class AdvancedField(
     val key: String,

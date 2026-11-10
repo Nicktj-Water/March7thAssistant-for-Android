@@ -59,8 +59,8 @@ android {
         // 并沿用旧版 /sdcard 存储模型 —— 这是整套方案能跑起来的前提。
         targetSdk = 28
 
-        versionCode = 8
-        versionName = "2.5.0"
+        versionCode = 9
+        versionName = "2.4.1"
 
         ndk {
             // 内置 bootstrap 与容器镜像都是 aarch64，其它架构需各自重建资产
