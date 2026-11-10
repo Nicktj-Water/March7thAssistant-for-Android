@@ -55,12 +55,12 @@ object ConfigSync {
                 loopMode = settings.loopMode(),
                 logLevel = settings.logLevel(),
                 usePaidTime = settings.usePaidTime(),
-                toggles = settings.allToggles(),
+                toggles = emptyMap(),
                 debugPort = settings.monitorPort(),
             ),
         )
         file.writeText(patched, Charsets.UTF_8)
-        onLog("    配置已更新（${patched.length} 字节，增量写入 ${TaskToggles.ALL.size} 个开关）")
+        onLog("    配置已更新（${patched.length} 字节；任务开关与配置文件页的修改已保留）")
         return file
     }
 }

@@ -1,6 +1,10 @@
 package com.miguanm7a.hsr.ui.config
 
 import android.os.Bundle
+import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
@@ -53,14 +57,20 @@ import com.miguanm7a.hsr.deploy.AdvancedConfig
 import com.miguanm7a.hsr.deploy.AdvancedField
 import com.miguanm7a.hsr.deploy.AdvancedGroup
 import com.miguanm7a.hsr.deploy.AdvancedType
+import com.miguanm7a.hsr.deploy.ConfigSync
+import com.miguanm7a.hsr.deploy.DeployScripts
 import com.miguanm7a.hsr.deploy.DeploySettings
+import com.miguanm7a.hsr.deploy.SharedPaths
+import com.miguanm7a.hsr.deploy.TermuxPaths
 import com.miguanm7a.hsr.ui.components.MaaCard
 import com.miguanm7a.hsr.ui.components.SectionHeader
 import com.miguanm7a.hsr.ui.theme.AccentTheme
 import com.miguanm7a.hsr.ui.theme.MaaDesignTokens
 import com.miguanm7a.hsr.ui.theme.MaaTermuxTheme
 import com.miguanm7a.hsr.ui.theme.ThemeMode
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
@@ -70,6 +80,8 @@ import kotlinx.coroutines.withContext
  * 两层结构：先选大分类（6 组），进组后再看具体字段 —— 87 项平铺一页太长。
  */
 class AdvancedConfigActivity : AppCompatActivity() {
+
+    private var generating = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -84,6 +96,39 @@ class AdvancedConfigActivity : AppCompatActivity() {
                 AdvancedConfigScreen(onBack = { finish() })
             }
         }
+    }
+
+    /** 离开配置文件页时自动保存当前 config.yaml 并重新生成启动脚本。 */
+    override fun finish() {
+        if (!generating) {
+            generating = true
+            val ctx = applicationContext
+            CoroutineScope(Dispatchers.IO).launch {
+                val result = runCatching {
+                    val settings = DeploySettings(ctx)
+                    ConfigSync.refresh(ctx, settings, {})
+                    val binds = DeployScripts.bindArgs(SharedPaths.guestProjectDir(ctx))
+                    val file = File(TermuxPaths.homeDir(ctx), "start-m7a.sh")
+                    file.parentFile?.mkdirs()
+                    file.writeText(
+                        DeployScripts.startScript(
+                            alias = settings.containerAlias(),
+                            afterFinish = settings.afterFinish(),
+                            logLevel = settings.logLevel(),
+                            binds = binds,
+                        ),
+                        Charsets.UTF_8,
+                    )
+                    file.setExecutable(true, false)
+                }
+                val msg = result.fold(
+                    onSuccess = { "已保存并生成启动脚本" },
+                    onFailure = { "生成启动脚本失败：${it.message}" },
+                )
+                runOnUiThread { Toast.makeText(ctx, msg, Toast.LENGTH_SHORT).show() }
+            }
+        }
+        super.finish()
     }
 }
 
@@ -129,7 +174,7 @@ private fun AdvancedConfigScreen(onBack: () -> Unit) {
                 },
             ) { Text(if (group == null) "← 返回" else "← 分类") }
             Text(
-                group?.title ?: "高级配置",
+                group?.title ?: "配置文件设置",
                 style = MaterialTheme.typography.titleLarge,
             )
             Spacer(Modifier.width(8.dp))
@@ -216,12 +261,12 @@ private fun CategoryList(onOpen: (AdvancedGroup) -> Unit) {
         item {
             MaaCard {
                 Text(
-                    "这里修改的是上游 config.yaml 的原始键值，保存后下一次运行生效。",
+                    "按电脑端设置页的结构分组；修改直接写入 m7a-project/config.yaml，离开本页时自动保存并生成启动脚本。",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Text(
-                    "App 自己的任务开关、定时、日志等仍在「设置」页；两处互不覆盖。",
+                    "定时、日志级别、容器名、外观等运行参数仍在「设置」页。时间戳只读，由 M7A 写入。",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -300,7 +345,7 @@ private fun FieldRow(
     onToggle: (Boolean) -> Unit,
     onEdit: () -> Unit,
 ) {
-    MaaCard(onClick = if (field.type == AdvancedType.BOOL) null else onEdit) {
+    MaaCard(onClick = if (field.type == AdvancedType.BOOL || field.type == AdvancedType.READONLY) null else onEdit) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text(field.title, style = MaterialTheme.typography.titleSmall)
@@ -319,7 +364,7 @@ private fun FieldRow(
             }
             if (field.type == AdvancedType.BOOL) {
                 Switch(checked = value == "true", onCheckedChange = onToggle)
-            } else {
+            } else if (field.type != AdvancedType.READONLY) {
                 Text("›", style = MaterialTheme.typography.titleLarge)
             }
         }
@@ -330,6 +375,7 @@ private fun summary(field: AdvancedField, value: String): String {
     return when (field.type) {
         AdvancedType.BOOL -> if (value == "true") "已开启" else "已关闭"
         AdvancedType.ENUM -> field.options.firstOrNull { it.first == value }?.second ?: value
+        AdvancedType.READONLY -> formatTimestamp(value)
         AdvancedType.RAW -> {
             val n = value.split('\n').count { it.isNotBlank() }
             if (n == 0) "（空 · 使用默认）" else "原始 YAML · $n 行"
@@ -344,6 +390,12 @@ private fun summary(field: AdvancedField, value: String): String {
         }
         else -> value.ifBlank { "（空）" }
     }
+}
+
+private fun formatTimestamp(raw: String): String {
+    val sec = raw.trim().toLongOrNull() ?: return "—"
+    if (sec <= 0L) return "尚未执行"
+    return SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date(sec * 1000L))
 }
 
 @Composable

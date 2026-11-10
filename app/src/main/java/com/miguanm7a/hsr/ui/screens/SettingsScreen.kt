@@ -63,12 +63,7 @@ fun SettingsScreen(
 ) {
     val ui by vm.ui.collectAsState()
     var showReset by remember { mutableStateOf(false) }
-    var subScreen by rememberSaveable { mutableStateOf<String?>(null) }
 
-    if (subScreen == "toggles") {
-        TaskTogglesScreen(vm = vm, onBack = { subScreen = null })
-        return
-    }
 
     Column(
         modifier = Modifier
@@ -96,24 +91,6 @@ fun SettingsScreen(
             )
         }
 
-        SectionHeader("任务")
-        MaaCard(onClick = { subScreen = "toggles" }) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text("任务开关", style = MaterialTheme.typography.titleMedium)
-                    Text(
-                        "决定「完整运行」会执行哪几项（清体力 / 日常 / 领取奖励 / 活动 …）",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                Icon(
-                    Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
         MaaCard {
             OutlinedTextField(
                 value = ui.logLevel,
@@ -136,7 +113,7 @@ fun SettingsScreen(
                 )
             }
             Text(
-                "调整任务开关或下面这些选项后，点「生成脚本」才会写入容器。",
+                "日志级别与付费时长会在启动任务时写入容器。",
                 style = MaterialTheme.typography.bodySmall,
                 color = WarnColor,
             )
@@ -208,19 +185,19 @@ fun SettingsScreen(
             )
         }
 
-        SectionHeader("高级配置")
+        SectionHeader("配置文件设置")
         MaaCard {
             val ctx = LocalContext.current
-            Text("副本 / 宇宙 / 终局 / 资产 / 活动", style = MaterialTheme.typography.titleSmall)
+            Text("按电脑端结构分组：体力 / 日常 / 货币战争 / 差分宇宙 / 逐光捡金 / 消息推送 / 杂项", style = MaterialTheme.typography.titleSmall)
             Text(
-                "${AdvancedConfig.FIELDS.size} 项上游 config.yaml 配置；直接写盘，下次运行生效。",
+                "${AdvancedConfig.FIELDS.size} 项，含任务开关与内置页面；离开本页自动保存并生成启动脚本。",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             OutlinedButton(
                 onClick = { ctx.startActivity(Intent(ctx, AdvancedConfigActivity::class.java)) },
                 modifier = Modifier.fillMaxWidth(),
-            ) { Text("打开高级配置") }
+            ) { Text("打开配置文件设置") }
         }
 
         SectionHeader("外观")
